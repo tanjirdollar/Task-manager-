@@ -1,0 +1,6 @@
+{
+  "name": "Kroma Productivity Studio",
+  "description": "Clean, modern, and responsive productivity suite for task management, calendar scheduling, events, focus timer, notes, and AI assistance.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
