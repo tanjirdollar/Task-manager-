@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Clock, MapPin, AlignLeft, Tag } from 'lucide-react';
+import { X, Calendar, Clock, MapPin, AlignLeft, Tag, AlertCircle } from 'lucide-react';
 import { CalendarEvent, EventType } from '../../types';
 import { getTodayStr } from '../../context/ProductivityContext';
 
@@ -25,8 +25,10 @@ export const EventModal: React.FC<EventModalProps> = ({
   const [endTime, setEndTime] = useState('11:00');
   const [location, setLocation] = useState('');
   const [type, setType] = useState<EventType>('meeting');
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
+    setErrorMessage('');
     if (eventToEdit) {
       setTitle(eventToEdit.title);
       setDescription(eventToEdit.description || '');
@@ -50,7 +52,10 @@ export const EventModal: React.FC<EventModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return;
+    if (!title.trim()) {
+      setErrorMessage('অনুগ্রহ করে ইভেন্টের একটি শিরোনাম প্রদান করুন');
+      return;
+    }
 
     onSave({
       title: title.trim(),
@@ -65,36 +70,45 @@ export const EventModal: React.FC<EventModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-slate-900/40 backdrop-blur-xs">
       <div
-        className="w-full max-w-lg bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]"
+        className="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col max-h-[92dvh]"
         role="dialog"
         aria-modal="true"
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-          <h2 className="text-base font-bold text-slate-900">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100 bg-slate-50/50">
+          <h2 className="text-sm sm:text-base font-bold text-slate-900 truncate">
             {eventToEdit ? 'ইভেন্ট সম্পাদনা করুন' : 'নতুন ইভেন্ট শিডিউল করুন'}
           </h2>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+            className="min-w-[36px] min-h-[36px] flex items-center justify-center p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors active:scale-95 touch-manipulation"
             aria-label="বন্ধ করুন"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
+          {errorMessage && (
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs font-semibold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
+
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
               ইভেন্টের শিরোনাম *
             </label>
             <input
               type="text"
-              required
               placeholder="যেমন: স্প্রিন্ট আর্কিটেকচার সিঙ্ক বা ক্লায়েন্ট ডেমো"
               value={title}
-              onChange={e => setTitle(e.target.value)}
+              onChange={e => {
+                setTitle(e.target.value);
+                if (errorMessage) setErrorMessage('');
+              }}
               className="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-shadow"
             />
           </div>
@@ -191,17 +205,17 @@ export const EventModal: React.FC<EventModalProps> = ({
             />
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+          <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors"
+              className="px-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-900 transition-colors rounded-xl active:scale-95 touch-manipulation"
             >
               বাতিল
             </button>
             <button
               type="submit"
-              className="px-5 py-2 text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg shadow-xs transition-colors whitespace-nowrap"
+              className="px-5 sm:px-6 py-2.5 text-xs sm:text-sm font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-xs transition-all whitespace-nowrap active:scale-95 touch-manipulation"
             >
               {eventToEdit ? 'পরিবর্তন সংরক্ষণ করুন' : 'ইভেন্ট শিডিউল করুন'}
             </button>

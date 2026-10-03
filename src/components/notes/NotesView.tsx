@@ -21,7 +21,8 @@ import {
   Calendar, 
   Clock, 
   ArrowUpDown,
-  Filter
+  Filter,
+  ChevronLeft
 } from 'lucide-react';
 import { useProductivity, toBengaliNumber } from '../../context/ProductivityContext';
 import { Note } from '../../types';
@@ -45,6 +46,7 @@ export const NotesView: React.FC<NotesViewProps> = () => {
   const [sortOrder, setSortOrder] = useState<SortOrder>('pinned_first');
   const [activeNoteId, setActiveNoteId] = useState<string>(notes[0]?.id || '');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [mobileSplitView, setMobileSplitView] = useState<'list' | 'editor'>('list');
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -188,28 +190,28 @@ export const NotesView: React.FC<NotesViewProps> = () => {
   return (
     <div className="space-y-5 max-w-7xl mx-auto">
       {/* 1. Header with Stats & Actions */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-1">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 sm:gap-4 pb-1">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
-              <FileText className="w-6 h-6 text-indigo-600" />
-              <span>নোটসমূহ ও নথিপত্র (Notes)</span>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
+              <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600" />
+              <span>নোটসমূহ ও নথিপত্র</span>
             </h1>
-            <span className="px-2.5 py-0.5 text-xs font-bold font-mono bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100">
-              {toBengaliNumber(notes.length)}টি নোট
+            <span className="px-2 py-0.5 text-xs font-bold font-mono bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100">
+              {toBengaliNumber(notes.length)}টি
             </span>
           </div>
-          <p className="text-sm text-slate-600 mt-1">
+          <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
             গুরুত্বপূর্ণ ভাবনা, মিটিং ডিসিশন, স্পেক এবং ডকুমেন্টস গুছিয়ে রাখুন ও ট্যাগ করুন।
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 self-start md:self-auto flex-wrap">
+        <div className="flex items-center gap-2 self-start md:self-auto flex-wrap">
           {/* View Mode Switcher: Cards, List, Split Studio */}
           <div className="p-1 bg-white border border-slate-200 rounded-xl shadow-2xs flex items-center gap-1">
             <button
               onClick={() => setViewMode('cards')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all active:scale-95 touch-manipulation ${
                 viewMode === 'cards'
                   ? 'bg-slate-900 text-white shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -222,7 +224,7 @@ export const NotesView: React.FC<NotesViewProps> = () => {
 
             <button
               onClick={() => setViewMode('list')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all active:scale-95 touch-manipulation ${
                 viewMode === 'list'
                   ? 'bg-slate-900 text-white shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -235,7 +237,7 @@ export const NotesView: React.FC<NotesViewProps> = () => {
 
             <button
               onClick={() => setViewMode('split')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all active:scale-95 touch-manipulation ${
                 viewMode === 'split'
                   ? 'bg-slate-900 text-white shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -243,17 +245,17 @@ export const NotesView: React.FC<NotesViewProps> = () => {
               title="স্প্লিট এডিটর ভিউ (Studio Editor)"
             >
               <Columns className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">স্প্লিট এডিটর</span>
+              <span className="hidden sm:inline">স্প্লিট</span>
             </button>
           </div>
 
           {/* New Note Button */}
           <button
             onClick={handleOpenCreateModal}
-            className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-xs transition-all active:scale-95 whitespace-nowrap"
+            className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-xs transition-all active:scale-95 touch-manipulation whitespace-nowrap ml-auto sm:ml-0"
           >
             <Plus className="w-4 h-4" />
-            <span>নতুন নোট তৈরি করুন</span>
+            <span>নতুন নোট</span>
           </button>
         </div>
       </div>
@@ -371,15 +373,17 @@ export const NotesView: React.FC<NotesViewProps> = () => {
 
       {/* 3. Empty Search / Filter State */}
       {filteredNotes.length === 0 && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-2xs">
-          <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3 stroke-1" />
-          <h3 className="text-base font-bold text-slate-800">কোনো নোট পাওয়া যায়নি</h3>
+        <div className="bg-white rounded-2xl border border-slate-200/90 p-12 text-center shadow-2xs flex flex-col items-center justify-center">
+          <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 mb-3">
+            <FileText className="w-6 h-6 text-slate-400" />
+          </div>
+          <h3 className="text-sm sm:text-base font-bold text-slate-800">কোনো নোট পাওয়া যায়নি</h3>
           <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
             {activeSearch || selectedCategory !== 'all' || selectedTag
               ? 'আপনার বর্তমান ফিল্টারের সাথে মিলে এমন কোনো নোট পাওয়া যায়নি। ফিল্টার রিসেট করে আবার চেষ্টা করুন।'
               : 'এখনো কোনো নোট সংরক্ষণ করেননি। আপনার প্রথম নোটটি লিখুন!'}
           </p>
-          <div className="mt-4 flex items-center justify-center gap-2">
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
             {(activeSearch || selectedCategory !== 'all' || selectedTag) && (
               <button
                 onClick={() => {
@@ -388,14 +392,14 @@ export const NotesView: React.FC<NotesViewProps> = () => {
                   setSelectedCategory('all');
                   setSelectedTag(null);
                 }}
-                className="px-3.5 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
+                className="px-3.5 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors touch-manipulation active:scale-95"
               >
                 সব ফিল্টার মুছুন
               </button>
             )}
             <button
               onClick={handleOpenCreateModal}
-              className="px-4 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
+              className="px-4 py-2.5 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-xs transition-all flex items-center gap-1.5 touch-manipulation active:scale-95"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>নতুন নোট তৈরি করুন</span>
@@ -493,14 +497,14 @@ export const NotesView: React.FC<NotesViewProps> = () => {
                         <span className="font-mono tabular-nums">{toBengaliNumber(noteWordCount)} শব্দ</span>
                       </div>
 
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                         <button
                           type="button"
                           onClick={e => {
                             e.stopPropagation();
                             handleOpenEditModal(note);
                           }}
-                          className="p-1 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+                          className="min-h-[36px] min-w-[36px] p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors flex items-center justify-center active:scale-95 touch-manipulation"
                           title="সম্পাদনা করুন"
                         >
                           <Edit3 className="w-3.5 h-3.5" />
@@ -512,7 +516,7 @@ export const NotesView: React.FC<NotesViewProps> = () => {
                             e.stopPropagation();
                             setDeleteCandidateId(note.id);
                           }}
-                          className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors"
+                          className="min-h-[36px] min-w-[36px] p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors flex items-center justify-center active:scale-95 touch-manipulation"
                           title="নোটটি মুছুন"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -641,14 +645,16 @@ export const NotesView: React.FC<NotesViewProps> = () => {
 
           {/* LAYOUT C: SPLIT STUDIO VIEW (Left master list + right live markdown editor) */}
           {viewMode === 'split' && (
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 h-[calc(100vh-16rem)] min-h-[550px]">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 h-[calc(100vh-16rem)] min-h-[500px] sm:min-h-[550px]">
               {/* Left Pane: Notes Master List (4 cols) */}
-              <div className="md:col-span-4 bg-white rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col overflow-hidden">
+              <div className={`md:col-span-4 bg-white rounded-2xl border border-slate-200/90 shadow-2xs flex-col overflow-hidden ${
+                mobileSplitView === 'list' ? 'flex' : 'hidden md:flex'
+              }`}>
                 <div className="p-3 border-b border-slate-100 flex items-center justify-between text-xs font-bold text-slate-700">
                   <span>নোট তালিকা ({toBengaliNumber(filteredNotes.length)})</span>
                   <button
                     onClick={handleOpenCreateModal}
-                    className="text-indigo-600 hover:text-indigo-800 flex items-center gap-1 font-bold"
+                    className="text-indigo-600 hover:text-indigo-800 flex items-center gap-1 font-bold p-1 rounded-lg hover:bg-indigo-50"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>নতুন</span>
@@ -661,7 +667,10 @@ export const NotesView: React.FC<NotesViewProps> = () => {
                     return (
                       <div
                         key={n.id}
-                        onClick={() => setActiveNoteId(n.id)}
+                        onClick={() => {
+                          setActiveNoteId(n.id);
+                          setMobileSplitView('editor');
+                        }}
                         className={`p-3.5 cursor-pointer transition-colors text-left relative ${
                           isSelected
                             ? 'bg-slate-100/90 text-slate-900 font-semibold'
@@ -699,19 +708,33 @@ export const NotesView: React.FC<NotesViewProps> = () => {
               </div>
 
               {/* Right Pane: Live Editor (8 cols) */}
-              <div className="md:col-span-8 bg-white rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col overflow-hidden">
+              <div className={`md:col-span-8 bg-white rounded-2xl border border-slate-200/90 shadow-2xs flex-col overflow-hidden ${
+                mobileSplitView === 'editor' ? 'flex' : 'hidden md:flex'
+              }`}>
                 {activeNote ? (
                   <>
                     {/* Note Editor Header */}
-                    <div className="p-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                    <div className="p-3.5 sm:p-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2.5 sm:gap-3">
                       <div className="flex-1 min-w-[200px]">
-                        <input
-                          type="text"
-                          value={activeNote.title}
-                          onChange={e => updateNote(activeNote.id, { title: e.target.value })}
-                          placeholder="নোটের শিরোনাম লিখুন..."
-                          className="w-full text-base font-bold text-slate-900 focus:outline-hidden placeholder:text-slate-400"
-                        />
+                        <div className="flex items-center gap-2">
+                          {/* Mobile back to list button */}
+                          <button
+                            type="button"
+                            onClick={() => setMobileSplitView('list')}
+                            className="md:hidden flex items-center gap-1 text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded-lg shrink-0 touch-manipulation active:scale-95"
+                            title="তালিকায় ফিরে যান"
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                            <span>তালিকা</span>
+                          </button>
+                          <input
+                            type="text"
+                            value={activeNote.title}
+                            onChange={e => updateNote(activeNote.id, { title: e.target.value })}
+                            placeholder="নোটের শিরোনাম লিখুন..."
+                            className="w-full text-sm sm:text-base font-bold text-slate-900 focus:outline-hidden placeholder:text-slate-400 truncate"
+                          />
+                        </div>
                         <div className="flex items-center gap-2 mt-1.5 text-[11px] text-slate-500 flex-wrap">
                           <select
                             value={activeNote.category}

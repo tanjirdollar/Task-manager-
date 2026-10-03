@@ -108,23 +108,23 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-slate-900/50 backdrop-blur-xs animate-fade-in">
       <div 
-        className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]"
+        className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92dvh]"
         role="dialog"
         aria-modal="true"
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/70">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100 bg-slate-50/70">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-indigo-600" />
-            <h2 className="text-base font-bold text-slate-900">
+            <CheckCircle2 className="w-5 h-5 text-indigo-600 shrink-0" />
+            <h2 className="text-sm sm:text-base font-bold text-slate-900 truncate">
               {taskToEdit ? 'টাস্ক সম্পাদনা করুন (Edit Task)' : 'নতুন টাস্ক তৈরি করুন (Create Task)'}
             </h2>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors"
+            className="min-w-[36px] min-h-[36px] flex items-center justify-center p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-xl transition-colors active:scale-95 touch-manipulation"
             aria-label="বন্ধ করুন"
           >
             <X className="w-5 h-5" />
@@ -132,7 +132,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
         </div>
 
         {/* Modal Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
           {errorMessage && (
             <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs font-semibold flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
@@ -264,41 +264,39 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             )}
           </div>
 
-          {/* Due Date & Quick Presets */}
+            {/* Due Date & Quick Presets */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5 flex items-center justify-between">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5 flex flex-wrap items-center justify-between gap-1">
               <span className="flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5 text-slate-400" />
                 সমাপ্তির তারিখ (Due Date)
               </span>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1">
                 <button
                   type="button"
                   onClick={() => setDueDate(getTodayStr())}
-                  className="text-[11px] text-indigo-600 hover:underline font-semibold"
+                  className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-[11px] text-indigo-700 rounded-md font-semibold transition-colors active:scale-95 touch-manipulation"
                 >
                   আজ
                 </button>
-                <span className="text-slate-300">·</span>
                 <button
                   type="button"
                   onClick={() => setDueDate(getOffsetDateStr(1))}
-                  className="text-[11px] text-indigo-600 hover:underline font-semibold"
+                  className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-[11px] text-indigo-700 rounded-md font-semibold transition-colors active:scale-95 touch-manipulation"
                 >
                   আগামীকাল
                 </button>
-                <span className="text-slate-300">·</span>
                 <button
                   type="button"
                   onClick={() => setDueDate(getOffsetDateStr(7))}
-                  className="text-[11px] text-indigo-600 hover:underline font-semibold"
+                  className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-[11px] text-indigo-700 rounded-md font-semibold transition-colors active:scale-95 touch-manipulation"
                 >
                   ৭ দিন পর
                 </button>
               </div>
             </label>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <input
                 type="date"
                 required
@@ -336,16 +334,16 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 {subtasks.map((st) => (
                   <div
                     key={st.id}
-                    className="flex items-center justify-between gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 font-medium"
+                    className="flex items-center justify-between gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 font-medium"
                   >
                     <span className="truncate">{st.title}</span>
                     <button
                       type="button"
                       onClick={() => handleRemoveSubtask(st.id)}
-                      className="text-slate-400 hover:text-rose-600 p-0.5 rounded transition-colors"
+                      className="min-w-[32px] min-h-[32px] flex items-center justify-center text-slate-400 hover:text-rose-600 active:bg-rose-50 rounded-lg transition-colors touch-manipulation"
                       title="মুছুন"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 ))}
@@ -355,7 +353,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             <div className="flex gap-2">
               <input
                 type="text"
-                placeholder="নতুন উপ-টাস্ক লিখুন (যেমন: কোড রিভিউ সম্পন্ন করা)..."
+                placeholder="নতুন উপ-টাস্ক লিখুন (যেমন: কোড রিভিউ)..."
                 value={newSubtaskTitle}
                 onChange={e => setNewSubtaskTitle(e.target.value)}
                 onKeyDown={e => {
@@ -364,31 +362,31 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     handleAddSubtask();
                   }
                 }}
-                className="flex-1 px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-slate-900"
+                className="flex-1 px-3.5 py-2 text-xs sm:text-xs bg-white border border-slate-300 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-slate-900"
               />
               <button
                 type="button"
                 onClick={handleAddSubtask}
-                className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors flex items-center gap-1 shrink-0"
+                className="px-3.5 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors flex items-center gap-1 shrink-0 active:scale-95 touch-manipulation"
               >
                 <Plus className="w-3.5 h-3.5" />
-                যোগ করুন
+                <span>যোগ করুন</span>
               </button>
             </div>
           </div>
 
           {/* Footer Controls */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+          <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors"
+              className="px-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-900 transition-colors rounded-xl active:scale-95 touch-manipulation"
             >
               বাতিল
             </button>
             <button
               type="submit"
-              className="px-6 py-2.5 text-sm font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-md transition-all whitespace-nowrap active:scale-95"
+              className="px-5 sm:px-6 py-2.5 text-xs sm:text-sm font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-xs transition-all whitespace-nowrap active:scale-95 touch-manipulation"
             >
               {taskToEdit ? 'পরিবর্তন সংরক্ষণ করুন' : 'টাস্ক তৈরি করুন'}
             </button>

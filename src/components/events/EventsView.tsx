@@ -71,34 +71,35 @@ export const EventsView: React.FC<EventsViewProps> = ({ onOpenNewEvent, onEditEv
   return (
     <div className="space-y-6">
       {/* Header controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 pb-1 sm:pb-2">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            ইভেন্ট ও মিটিং সূচি
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
+            <CalendarDays className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600" />
+            <span>ইভেন্ট ও মিটিং সূচি</span>
           </h1>
-          <p className="text-sm text-slate-600 mt-0.5">
-            মিটিং, ওয়ার্কশপ এবং সংরক্ষিত ডিপ-ফোকাস সময়ের কার্যকর শিডিউল পরিচালনা।
+          <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
+            মিটিং, ওয়ার্কশপ এবং সংরক্ষিত ডিপ-ফোকাস সময়ের শিডিউল পরিচালনা।
           </p>
         </div>
 
         <button
           onClick={onOpenNewEvent}
-          className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg shadow-xs transition-colors whitespace-nowrap self-start sm:self-auto"
+          className="flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2.5 sm:py-2 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-xs transition-all whitespace-nowrap self-start sm:self-auto touch-manipulation active:scale-95 min-h-[40px]"
         >
-          <Plus className="w-3.5 h-3.5" />
+          <Plus className="w-4 h-4" />
           <span>ইভেন্ট শিডিউল করুন</span>
         </button>
       </div>
 
       {/* Filter and timeframe controls */}
-      <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-white border border-slate-200 rounded-xl shadow-2xs">
+      <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 p-2.5 sm:p-3 bg-white border border-slate-200 rounded-2xl shadow-2xs">
         {/* Timeframe filter */}
-        <div className="flex items-center bg-slate-100 p-1 rounded-lg">
+        <div className="flex items-center bg-slate-100 p-1 rounded-xl">
           <button
             onClick={() => setTimeFilter('upcoming')}
-            className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors touch-manipulation ${
               timeFilter === 'upcoming'
-                ? 'bg-white text-slate-900 shadow-2xs'
+                ? 'bg-white text-slate-900 shadow-2xs font-bold'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -106,9 +107,9 @@ export const EventsView: React.FC<EventsViewProps> = ({ onOpenNewEvent, onEditEv
           </button>
           <button
             onClick={() => setTimeFilter('all')}
-            className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors touch-manipulation ${
               timeFilter === 'all'
-                ? 'bg-white text-slate-900 shadow-2xs'
+                ? 'bg-white text-slate-900 shadow-2xs font-bold'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -116,9 +117,9 @@ export const EventsView: React.FC<EventsViewProps> = ({ onOpenNewEvent, onEditEv
           </button>
           <button
             onClick={() => setTimeFilter('past')}
-            className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors touch-manipulation ${
               timeFilter === 'past'
-                ? 'bg-white text-slate-900 shadow-2xs'
+                ? 'bg-white text-slate-900 shadow-2xs font-bold'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -128,14 +129,14 @@ export const EventsView: React.FC<EventsViewProps> = ({ onOpenNewEvent, onEditEv
 
         {/* Type Filter */}
         <div className="flex flex-wrap items-center gap-1.5 text-xs">
-          <span className="text-slate-500 font-medium mr-1">ধরন:</span>
+          <span className="text-slate-500 font-medium mr-1 hidden sm:inline">ধরন:</span>
           {eventTypes.map(t => (
             <button
               key={t.id}
               onClick={() => setFilterType(t.id)}
-              className={`px-2.5 py-1 rounded-md transition-colors whitespace-nowrap ${
+              className={`px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap touch-manipulation ${
                 filterType === t.id
-                  ? 'bg-slate-900 text-white font-semibold'
+                  ? 'bg-slate-900 text-white font-bold'
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
@@ -238,14 +239,14 @@ export const EventsView: React.FC<EventsViewProps> = ({ onOpenNewEvent, onEditEv
                   <div className="flex items-center gap-1 self-end sm:self-start shrink-0">
                     <button
                       onClick={() => onEditEvent(evt)}
-                      className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                      className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors touch-manipulation active:scale-95"
                       title="সম্পাদনা করুন"
                     >
                       <Edit3 className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => deleteEvent(evt.id)}
-                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                      className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors touch-manipulation active:scale-95"
                       title="মুছে ফেলুন"
                     >
                       <Trash2 className="w-4 h-4" />

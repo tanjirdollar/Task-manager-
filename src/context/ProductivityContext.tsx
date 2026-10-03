@@ -1,10 +1,20 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Task, CalendarEvent, Note, FocusSession, ActiveTab, Priority, Category, TaskStatus, UserProfile } from '../types';
 
+export interface ToastNotification {
+  id: string;
+  message: string;
+  type?: 'success' | 'info' | 'error';
+}
+
 interface ProductivityContextType {
   user: UserProfile;
   activeTab: ActiveTab;
   setActiveTab: (tab: ActiveTab) => void;
+  // Toast notifications
+  toast: ToastNotification | null;
+  showToast: (message: string, type?: 'success' | 'info' | 'error') => void;
+  dismissToast: () => void;
   // Tasks
   tasks: Task[];
   addTask: (task: Omit<Task, 'id' | 'createdAt'>) => Task;
@@ -293,6 +303,25 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFocusTaskId, setActiveFocusTaskId] = useState<string | null>(null);
+  const [toast, setToast] = useState<ToastNotification | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
+    const id = `toast-${Date.now()}`;
+    setToast({ id, message, type });
+  };
+
+  const dismissToast = () => {
+    setToast(null);
+  };
+
+  // Auto-dismiss toast
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => {
+      setToast(null);
+    }, 3500);
+    return () => clearTimeout(timer);
+  }, [toast]);
 
   // User details
   const [user] = useState<UserProfile>(defaultUser);
@@ -359,6 +388,7 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
       createdAt: new Date().toISOString(),
     };
     setTasks(prev => [task, ...prev]);
+    showToast('নতুন টাস্ক সফলভাবে তৈরি হয়েছে', 'success');
     return task;
   };
 
@@ -377,6 +407,7 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
         return t;
       })
     );
+    showToast('টাস্ক হালনাগাদ করা হয়েছে', 'success');
   };
 
   const deleteTask = (id: string) => {
@@ -384,6 +415,7 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
     if (activeFocusTaskId === id) {
       setActiveFocusTaskId(null);
     }
+    showToast('টাস্ক মুছে ফেলা হয়েছে', 'info');
   };
 
   const toggleTaskStatus = (id: string) => {
@@ -392,6 +424,11 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
         if (t.id === id) {
           const isDone = t.status === 'completed';
           const nextStatus: TaskStatus = isDone ? 'todo' : 'completed';
+          if (!isDone) {
+            showToast('অভিনন্দন! টাস্ক সম্পন্ন হয়েছে', 'success');
+          } else {
+            showToast('টাস্ক পুনরায় প্রক্রিয়াধীন হিসেবে সেট করা হয়েছে', 'info');
+          }
           return {
             ...t,
             status: nextStatus,
@@ -430,6 +467,7 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
       id: `evt-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
     };
     setEvents(prev => [...prev, event].sort((a, b) => `${a.date} ${a.startTime}`.localeCompare(`${b.date} ${b.startTime}`)));
+    showToast('ইভেন্ট সফলভাবে শিডিউল করা হয়েছে', 'success');
     return event;
   };
 
@@ -438,10 +476,12 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
       prev.map(e => (e.id === id ? { ...e, ...updates } : e))
         .sort((a, b) => `${a.date} ${a.startTime}`.localeCompare(`${b.date} ${b.startTime}`))
     );
+    showToast('ইভেন্ট আপডেট করা হয়েছে', 'success');
   };
 
   const deleteEvent = (id: string) => {
     setEvents(prev => prev.filter(e => e.id !== id));
+    showToast('ইভেন্ট মুছে ফেলা হয়েছে', 'info');
   };
 
   // Note Actions
@@ -455,6 +495,7 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
       updatedAt: now,
     };
     setNotes(prev => [note, ...prev]);
+    showToast('নোট সফলভাবে সংরক্ষণ করা হয়েছে', 'success');
     return note;
   };
 
@@ -466,10 +507,12 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
           : n
       )
     );
+    showToast('নোট আপডেট করা হয়েছে', 'success');
   };
 
   const deleteNote = (id: string) => {
     setNotes(prev => prev.filter(n => n.id !== id));
+    showToast('নোট মুছে ফেলা হয়েছে', 'info');
   };
 
   const togglePinNote = (id: string) => {
@@ -490,6 +533,7 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
       completedAt: new Date().toISOString(),
     };
     setFocusSessions(prev => [session, ...prev]);
+    showToast(`${toBengaliNumber(minutes)} মিনিটের ফোকাস সেশন সফলভাবে সম্পন্ন!`, 'success');
   };
 
   // Metrics
@@ -519,6 +563,9 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
         user,
         activeTab,
         setActiveTab,
+        toast,
+        showToast,
+        dismissToast,
         tasks,
         addTask,
         updateTask,

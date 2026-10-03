@@ -83,7 +83,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
       )}
 
       <aside
-        className={`fixed md:sticky top-16 z-40 md:z-20 h-[calc(100vh-4rem)] w-64 bg-white border-r border-slate-200 flex flex-col justify-between p-4 transition-transform duration-200 ease-in-out ${
+        className={`fixed md:sticky top-16 z-40 md:z-20 h-[calc(100dvh-4rem)] md:h-[calc(100vh-4rem)] w-64 bg-white border-r border-slate-200 flex flex-col justify-between p-4 transition-transform duration-200 ease-in-out ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
@@ -92,16 +92,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
             ওয়ার্কস্পেস মেনু
           </div>
 
-          <nav className="space-y-0.5" aria-label="প্রধান নেভিগেশন">
+          <nav className="space-y-1" aria-label="প্রধান নেভিগেশন">
             {navItems.map(item => {
               const isActive = activeTab === item.id;
               return (
                 <button
                   key={item.id}
                   onClick={() => handleSelectTab(item.id)}
-                  className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap group ${
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 min-h-[42px] text-xs font-semibold rounded-xl transition-all whitespace-nowrap group touch-manipulation active:scale-98 ${
                     isActive
-                      ? 'bg-slate-900 text-white shadow-xs'
+                      ? 'bg-slate-900 text-white shadow-xs font-bold'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                   }`}
                 >
@@ -114,7 +114,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
 
                   {item.badge !== undefined && (
                     <span
-                      className={`text-[11px] font-mono tabular-nums px-1.5 py-0.5 rounded-md ${
+                      className={`text-[11px] font-mono tabular-nums px-2 py-0.5 rounded-md ${
                         isActive
                           ? 'bg-slate-800 text-slate-200'
                           : 'bg-slate-100 text-slate-600'

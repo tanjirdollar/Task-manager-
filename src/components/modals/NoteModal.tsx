@@ -95,31 +95,31 @@ export const NoteModal: React.FC<NoteModalProps> = ({
   const wordCount = content.trim().split(/\s+/).filter(Boolean).length;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4">
       <div 
-        className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 relative animate-in fade-in zoom-in-95 duration-150"
+        className="bg-white rounded-2xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl border border-slate-200 relative animate-in fade-in zoom-in-95 duration-150 max-h-[92dvh] overflow-y-auto"
         role="dialog"
         aria-modal="true"
         aria-labelledby="note-modal-title"
       >
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+        <div className="flex items-center justify-between pb-3.5 sm:pb-4 border-b border-slate-100">
           <div className="flex items-center gap-2">
-            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl shrink-0">
               <FileText className="w-5 h-5" />
             </div>
-            <div>
-              <h2 id="note-modal-title" className="text-base font-bold text-slate-900">
+            <div className="min-w-0">
+              <h2 id="note-modal-title" className="text-sm sm:text-base font-bold text-slate-900 truncate">
                 {noteToEdit ? 'নোট সম্পাদনা করুন (Edit Note)' : 'নতুন নোট তৈরি করুন (Create Note)'}
               </h2>
-              <p className="text-xs text-slate-500">
+              <p className="text-[11px] sm:text-xs text-slate-500 truncate">
                 আপনার ভাবনা, মিটিং সারাংশ বা প্রজেক্ট ডকুমেন্টস সংরক্ষণ করুন
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors"
+            className="min-w-[36px] min-h-[36px] flex items-center justify-center p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors active:scale-95 touch-manipulation"
             title="বন্ধ করুন"
           >
             <X className="w-5 h-5" />
@@ -127,7 +127,7 @@ export const NoteModal: React.FC<NoteModalProps> = ({
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+        <form onSubmit={handleSubmit} className="mt-4 sm:mt-5 space-y-4">
           {/* Title Input */}
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
@@ -266,11 +266,11 @@ export const NoteModal: React.FC<NoteModalProps> = ({
             </div>
 
             {/* Snippet Toolbar */}
-            <div className="px-3 py-1.5 bg-slate-100/80 border border-b-0 border-slate-200 rounded-t-xl flex items-center gap-1 text-slate-600 text-xs">
+            <div className="px-3 py-1.5 bg-slate-100/80 border border-b-0 border-slate-200 rounded-t-xl flex items-center gap-1.5 text-slate-600 text-xs overflow-x-auto no-scrollbar">
               <button
                 type="button"
                 onClick={() => insertSnippet('##')}
-                className="p-1 hover:bg-white hover:text-slate-900 rounded-md transition-colors flex items-center gap-1 text-[11px] font-semibold"
+                className="px-2 py-1 hover:bg-white hover:text-slate-900 rounded-md transition-colors flex items-center gap-1 text-[11px] font-semibold shrink-0 active:scale-95 touch-manipulation"
                 title="হেডিং"
               >
                 <Heading2 className="w-3.5 h-3.5" />
@@ -279,7 +279,7 @@ export const NoteModal: React.FC<NoteModalProps> = ({
               <button
                 type="button"
                 onClick={() => insertSnippet('-')}
-                className="p-1 hover:bg-white hover:text-slate-900 rounded-md transition-colors flex items-center gap-1 text-[11px] font-semibold"
+                className="px-2 py-1 hover:bg-white hover:text-slate-900 rounded-md transition-colors flex items-center gap-1 text-[11px] font-semibold shrink-0 active:scale-95 touch-manipulation"
                 title="বুলেট লিস্ট"
               >
                 <ListIcon className="w-3.5 h-3.5" />
@@ -288,7 +288,7 @@ export const NoteModal: React.FC<NoteModalProps> = ({
               <button
                 type="button"
                 onClick={() => insertSnippet('- [ ]')}
-                className="p-1 hover:bg-white hover:text-slate-900 rounded-md transition-colors flex items-center gap-1 text-[11px] font-semibold"
+                className="px-2 py-1 hover:bg-white hover:text-slate-900 rounded-md transition-colors flex items-center gap-1 text-[11px] font-semibold shrink-0 active:scale-95 touch-manipulation"
                 title="চেকলিস্ট"
               >
                 <CheckSquare className="w-3.5 h-3.5" />
@@ -297,7 +297,7 @@ export const NoteModal: React.FC<NoteModalProps> = ({
               <button
                 type="button"
                 onClick={() => insertSnippet('```\n\n```')}
-                className="p-1 hover:bg-white hover:text-slate-900 rounded-md transition-colors flex items-center gap-1 text-[11px] font-semibold"
+                className="px-2 py-1 hover:bg-white hover:text-slate-900 rounded-md transition-colors flex items-center gap-1 text-[11px] font-semibold shrink-0 active:scale-95 touch-manipulation"
                 title="কোড ব্লক"
               >
                 <Code className="w-3.5 h-3.5" />
@@ -306,11 +306,11 @@ export const NoteModal: React.FC<NoteModalProps> = ({
             </div>
 
             <textarea
-              rows={8}
+              rows={7}
               value={content}
               onChange={e => setContent(e.target.value)}
               placeholder="এখানে আপনার সম্পূর্ণ নোট, মিটিং ফলাফল, আর্কিটেকচার ড্রাফট বা কর্মপরিকল্পনা বিস্তারিতভাবে লিখুন..."
-              className="w-full p-4 text-sm bg-slate-50 border border-slate-200 rounded-b-xl text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 resize-none font-sans leading-relaxed transition-all shadow-2xs"
+              className="w-full p-3 sm:p-4 text-sm bg-slate-50 border border-slate-200 rounded-b-xl text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 resize-none font-sans leading-relaxed transition-all shadow-2xs"
             />
           </div>
 
@@ -319,13 +319,13 @@ export const NoteModal: React.FC<NoteModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors"
+              className="px-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-900 rounded-xl transition-colors active:scale-95 touch-manipulation"
             >
-              বাতিল (Cancel)
+              বাতিল
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-xs transition-all flex items-center gap-1.5 active:scale-95"
+              className="px-5 sm:px-6 py-2.5 text-xs sm:text-sm font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-xs transition-all flex items-center gap-1.5 active:scale-95 touch-manipulation"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>{noteToEdit ? 'পরিবর্তন সংরক্ষণ করুন' : 'নোট তৈরি করুন'}</span>

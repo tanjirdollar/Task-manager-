@@ -45,12 +45,12 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 sm:px-6 bg-white border-b border-slate-200">
+    <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-3 sm:px-6 bg-white border-b border-slate-200">
       {/* Zone 1: Brand & Context Wordmark */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="p-1.5 text-slate-600 hover:text-slate-900 md:hidden rounded-lg hover:bg-slate-100 transition-colors"
+          className="min-w-[42px] min-h-[42px] flex items-center justify-center p-2 text-slate-600 hover:text-slate-900 md:hidden rounded-xl hover:bg-slate-100 active:bg-slate-200 transition-colors touch-manipulation"
           aria-label="নেভিগেশন মেনু খুলুন"
         >
           {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -58,13 +58,13 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         <button 
           onClick={() => setActiveTab('dashboard')}
-          className="text-left group flex items-center gap-2 focus:outline-hidden"
+          className="text-left group flex items-center gap-2 focus:outline-hidden min-h-[42px] py-1"
         >
-          <span className="text-lg font-bold tracking-tight text-slate-900 group-hover:text-slate-700 transition-colors">
+          <span className="text-base sm:text-lg font-bold tracking-tight text-slate-900 group-hover:text-slate-700 transition-colors truncate">
             ক্রোমা স্টুডিও
           </span>
           <span className="hidden sm:inline-block text-slate-300 font-light" aria-hidden="true">/</span>
-          <span className="hidden sm:inline-block text-sm font-semibold text-slate-600">
+          <span className="hidden sm:inline-block text-sm font-semibold text-slate-600 truncate">
             {getBreadcrumbTitle(activeTab)}
           </span>
         </button>
@@ -79,12 +79,12 @@ export const Navbar: React.FC<NavbarProps> = ({
             placeholder="টাস্ক, নোট বা ইভেন্ট খুঁজুন..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-12 py-1.5 text-xs bg-slate-50 hover:bg-slate-100/80 focus:bg-white border border-slate-200 focus:border-slate-400 rounded-lg text-slate-800 placeholder:text-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-400 transition-all"
+            className="w-full pl-9 pr-12 py-2 text-xs bg-slate-50 hover:bg-slate-100/80 focus:bg-white border border-slate-200 focus:border-slate-400 rounded-xl text-slate-800 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-slate-900/10 transition-all"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-[11px]"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-[11px] font-semibold"
             >
               মুছুন
             </button>
@@ -93,10 +93,10 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       {/* Zone 3: Primary Actions & User Profile */}
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
         <button
           onClick={() => setActiveTab('assistant')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap ${
+          className={`flex items-center justify-center gap-1.5 min-h-[40px] px-3 sm:px-3.5 py-2 text-xs font-semibold rounded-xl transition-colors whitespace-nowrap active:scale-95 touch-manipulation ${
             activeTab === 'assistant'
               ? 'bg-slate-900 text-white'
               : 'text-slate-700 bg-slate-100 hover:bg-slate-200'
@@ -111,10 +111,11 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="relative">
           <button
             onClick={() => setQuickCreateOpen(!quickCreateOpen)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg shadow-xs transition-colors whitespace-nowrap shrink-0"
+            className="flex items-center justify-center gap-1.5 min-h-[40px] px-3 sm:px-3.5 py-2 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-xs transition-colors whitespace-nowrap shrink-0 active:scale-95 touch-manipulation"
+            title="নতুন আইটেম তৈরি করুন"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>তৈরি করুন</span>
+            <span className="hidden xs:inline sm:inline">তৈরি করুন</span>
           </button>
 
           {quickCreateOpen && (

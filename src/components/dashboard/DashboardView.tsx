@@ -149,7 +149,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* 1. Personalized Header & Profile Strip */}
-      <div className="p-6 bg-white rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+      <div className="p-4 sm:p-6 bg-white rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col md:flex-row md:items-center md:justify-between gap-5">
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
             <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
@@ -168,15 +168,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <span aria-hidden="true" className="text-slate-300">·</span>
             <span className="text-slate-500 font-mono">{user.email}</span>
             <span aria-hidden="true" className="text-slate-300">·</span>
-            <span className="text-indigo-600 font-medium">আজকের লক্ষ্য: সর্বোচ্চ অগ্রাধিকারের কাজে পূর্ণ মনোযোগ</span>
+            <span className="text-indigo-600 font-medium">আজকের লক্ষ্য: সর্বোচ্চ মনোযোগ</span>
           </div>
         </div>
 
         {/* Quick Actions Bar */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full md:w-auto">
           <button
             onClick={onOpenNewTask}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-xs transition-all whitespace-nowrap active:scale-95"
+            className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 sm:py-2 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-xs transition-all whitespace-nowrap active:scale-95"
             title="নতুন টাস্ক তৈরি করুন"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -185,7 +185,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           <button
             onClick={onOpenNewEvent}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors whitespace-nowrap"
+            className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 sm:py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors whitespace-nowrap active:scale-95"
             title="নতুন ইভেন্ট শিডিউল করুন"
           >
             <CalendarIcon className="w-3.5 h-3.5 text-slate-600" />
@@ -194,7 +194,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           <button
             onClick={onOpenNewNote}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors whitespace-nowrap"
+            className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 sm:py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors whitespace-nowrap active:scale-95"
             title="নতুন নোট লিখুন"
           >
             <FileText className="w-3.5 h-3.5 text-slate-600" />
@@ -203,7 +203,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           <button
             onClick={() => setActiveTab('focus')}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/60 rounded-xl transition-colors whitespace-nowrap"
+            className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 sm:py-2 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/60 rounded-xl transition-colors whitespace-nowrap active:scale-95"
             title="ফোকাস টাইমার শুরু করুন"
           >
             <Play className="w-3.5 h-3.5 fill-indigo-700" />
@@ -379,10 +379,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
             {/* Task rows */}
             {displayedTasks.length === 0 ? (
-              <div className="py-8 text-center text-slate-400 text-xs bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-                {dashboardTaskView === 'today' 
-                  ? 'আজকের জন্য কোনো টাস্ক বাকি নেই। উপরের ইনপুট দিয়ে যোগ করুন অথবা "সব বাকি" বাটনে ক্লিক করুন।'
-                  : 'সব কাজ সম্পন্ন হয়েছে! নতুন টাস্ক তৈরি করতে পারেন।'}
+              <div className="py-10 px-4 text-center bg-slate-50/60 rounded-xl border border-slate-200/80 flex flex-col items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 mb-2.5">
+                  <CheckCircle2 className="w-5 h-5 text-slate-400" />
+                </div>
+                <p className="text-xs font-semibold text-slate-800">
+                  {dashboardTaskView === 'today' ? 'আজকের জন্য কোনো কাজ বাকি নেই' : 'সব কাজ সম্পন্ন হয়েছে'}
+                </p>
+                <p className="text-[11px] text-slate-500 mt-1 max-w-xs">
+                  {dashboardTaskView === 'today'
+                    ? 'উপরের ইনপুট দিয়ে দ্রুত নতুন টাস্ক যোগ করুন অথবা "সব বাকি" তালিকা দেখুন।'
+                    : 'চমৎকার! আপনি সব নির্ধারিত কাজ সম্পন্ন করেছেন।'}
+                </p>
               </div>
             ) : (
               <div className="space-y-2.5">
@@ -400,7 +408,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       <div className="flex items-start gap-3 min-w-0 flex-1">
                         <button
                           onClick={() => toggleTaskStatus(task.id)}
-                          className="mt-0.5 text-slate-400 hover:text-emerald-600 transition-colors shrink-0"
+                          className="mt-0.5 text-slate-400 hover:text-emerald-600 transition-colors shrink-0 min-w-[36px] min-h-[36px] flex items-center justify-center touch-manipulation active:scale-90"
                           aria-label={isCompleted ? 'অসম্পূর্ণ করুন' : 'সম্পন্ন করুন'}
                         >
                           {isCompleted ? (
@@ -412,7 +420,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
                         <div className="min-w-0 flex-1">
                           <h3
-                            className={`text-xs sm:text-sm font-bold truncate ${
+                            className={`text-xs sm:text-sm font-bold break-words line-clamp-2 sm:truncate ${
                               isCompleted
                                 ? 'line-through text-slate-400'
                                 : 'text-slate-900'
@@ -456,7 +464,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                             setActiveFocusTaskId(task.id);
                             setActiveTab('focus');
                           }}
-                          className="px-2.5 py-1 text-[11px] font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors flex items-center gap-1 shrink-0"
+                          className="px-2.5 py-1.5 min-h-[36px] text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-colors flex items-center gap-1 shrink-0 touch-manipulation active:scale-95"
                           title="এই টাস্কে ফোকাস টাইমার শুরু করুন"
                         >
                           <Play className="w-3 h-3 fill-indigo-700" />
@@ -587,10 +595,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
 
             {displayedEvents.length === 0 ? (
-              <div className="py-6 text-center text-slate-400 text-xs bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-                {dashboardEventView === 'today'
-                  ? 'আজকের জন্য কোনো ইভেন্ট নেই। আসন্ন ইভেন্ট দেখতে উপরের ট্যাবে ক্লিক করুন।'
-                  : 'কোনো আসন্ন ইভেন্ট নেই। নতুন ইভেন্ট শিডিউল করতে পারেন।'}
+              <div className="py-10 px-4 text-center bg-slate-50/60 rounded-xl border border-slate-200/80 flex flex-col items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 mb-2.5">
+                  <CalendarDays className="w-5 h-5 text-slate-400" />
+                </div>
+                <p className="text-xs font-semibold text-slate-800">
+                  {dashboardEventView === 'today' ? 'আজকের কোনো নির্ধারিত ইভেন্ট নেই' : 'আসন্ন কোনো ইভেন্ট নেই'}
+                </p>
+                <p className="text-[11px] text-slate-500 mt-1 max-w-xs">
+                  {dashboardEventView === 'today'
+                    ? 'আসন্ন ইভেন্ট দেখতে উপরের ট্যাবে ক্লিক করুন অথবা নতুন ইভেন্ট যুক্ত করুন।'
+                    : 'আপনার কোনো আসন্ন মিটিং নেই। নতুন ইভেন্ট শিডিউল করতে পারেন।'}
+                </p>
               </div>
             ) : (
               <div className="space-y-2.5">

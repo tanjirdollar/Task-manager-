@@ -398,56 +398,57 @@ export const AssistantView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4 max-w-4xl mx-auto h-[calc(100vh-10rem)] flex flex-col">
+    <div className="space-y-2.5 sm:space-y-4 max-w-4xl mx-auto h-[calc(100dvh-7.5rem)] md:h-[calc(100vh-9.5rem)] flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-slate-200 shrink-0">
+      <div className="flex items-center justify-between pb-2 sm:pb-3 border-b border-slate-200 shrink-0">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-indigo-600" />
-            <span>এআই প্রোডাক্টিভিটি সহকারী (AI Assistant)</span>
+          <h1 className="text-base sm:text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
+            <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
+            <span>এআই সহকারী</span>
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">
             প্রাকৃতিক ভাষায় নির্দেশ দিয়ে টাস্ক, ইভেন্ট ও নোট পরিচালনা করুন।
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-full border border-emerald-200">
+          <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] sm:text-xs font-bold rounded-full border border-emerald-200">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>সক্রিয় ও প্রস্তুত</span>
+            <span className="hidden sm:inline">সক্রিয় ও প্রস্তুত</span>
+            <span className="sm:hidden">সক্রিয়</span>
           </span>
         </div>
       </div>
 
       {/* Messages Scroll Area */}
-      <div className="flex-1 bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 sm:p-6 overflow-y-auto space-y-4">
+      <div className="flex-1 bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-3 sm:p-5 overflow-y-auto space-y-3 sm:space-y-4">
         {messages.map(msg => {
           const isUser = msg.sender === 'user';
           return (
             <div
               key={msg.id}
-              className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}
+              className={`flex gap-2 sm:gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}
             >
               {!isUser && (
-                <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
-                  <Bot className="w-4 h-4" />
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-2xs mt-0.5">
+                  <Bot className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </div>
               )}
 
-              <div className={`max-w-2xl space-y-2.5 ${isUser ? 'items-end' : 'items-start'}`}>
+              <div className={`max-w-[88%] sm:max-w-2xl space-y-2 ${isUser ? 'items-end' : 'items-start'}`}>
                 {/* Chat Bubble */}
                 <div
-                  className={`p-4 rounded-2xl text-xs sm:text-sm leading-relaxed ${
+                  className={`p-3 sm:p-4 rounded-2xl text-xs sm:text-sm leading-relaxed ${
                     isUser
                       ? 'bg-slate-900 text-white rounded-tr-xs shadow-xs'
                       : 'bg-slate-50 border border-slate-200 text-slate-800 rounded-tl-xs shadow-2xs'
                   }`}
                 >
-                  <div className="whitespace-pre-line font-medium">
+                  <div className="whitespace-pre-line font-medium break-words">
                     {msg.text}
                   </div>
 
-                  <div className={`text-[10px] mt-2 font-mono tabular-nums ${isUser ? 'text-slate-400 text-right' : 'text-slate-400'}`}>
+                  <div className={`text-[10px] mt-1.5 font-mono tabular-nums ${isUser ? 'text-slate-400 text-right' : 'text-slate-400'}`}>
                     {msg.timestamp}
                   </div>
                 </div>
@@ -578,15 +579,19 @@ export const AssistantView: React.FC = () => {
           );
         })}
 
-        {/* Loading Spinner Indicator */}
+        {/* Loading Indicator */}
         {isLoading && (
-          <div className="flex gap-3 justify-start items-center">
-            <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0">
-              <Bot className="w-4 h-4 animate-spin" />
+          <div className="flex gap-2.5 sm:gap-3 justify-start items-center">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0">
+              <Bot className="w-4 h-4 animate-pulse" />
             </div>
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl rounded-tl-xs text-xs text-slate-500 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-indigo-600 animate-ping" />
-              <span>নির্দেশ বিশ্লেষণ ও অ্যাপ্লিকেশন অ্যাকশন সম্পাদন করা হচ্ছে...</span>
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl rounded-tl-xs text-xs text-slate-600 flex items-center gap-2.5 shadow-2xs">
+              <div className="flex items-center gap-1 shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-bounce" />
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-bounce [animation-delay:150ms]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-bounce [animation-delay:300ms]" />
+              </div>
+              <span className="font-medium text-slate-600">নির্দেশ বিশ্লেষণ ও অ্যাপ্লিকেশন অ্যাকশন সম্পাদন করা হচ্ছে...</span>
             </div>
           </div>
         )}
@@ -595,14 +600,14 @@ export const AssistantView: React.FC = () => {
       </div>
 
       {/* Suggested Prompt Chips */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs shrink-0 scrollbar-none">
-        <span className="text-[11px] font-bold text-slate-400 shrink-0">উদাহরণ নির্দেশ:</span>
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs shrink-0 no-scrollbar">
+        <span className="text-[11px] font-semibold text-slate-400 shrink-0">পরামর্শ:</span>
         {promptSuggestions.map((item, idx) => (
           <button
             key={idx}
             type="button"
             onClick={() => handleSendMessage(item.prompt)}
-            className="px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-700 whitespace-nowrap text-xs font-semibold shadow-2xs transition-colors"
+            className="px-3 py-1.5 min-h-[34px] bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-xl text-slate-700 whitespace-nowrap text-xs font-medium transition-colors active:scale-95 touch-manipulation"
           >
             {item.label}
           </button>
@@ -615,20 +620,20 @@ export const AssistantView: React.FC = () => {
           e.preventDefault();
           handleSendMessage();
         }}
-        className="flex items-center gap-2 p-2 bg-white border border-slate-200/90 rounded-2xl shadow-2xs shrink-0"
+        className="flex items-center gap-2 p-1.5 sm:p-2 bg-white border border-slate-200 rounded-2xl shadow-sm shrink-0"
       >
         <input
           type="text"
           value={inputMessage}
           onChange={e => setInputMessage(e.target.value)}
-          placeholder="নির্দেশ লিখুন (যেমন: Create a high priority task to finish my YouTube script today)..."
-          className="flex-1 px-3 py-2 text-xs sm:text-sm bg-transparent focus:outline-hidden text-slate-900 placeholder:text-slate-400 font-medium"
+          placeholder="প্রাকৃতিক ভাষায় নির্দেশ লিখুন (টাস্ক, ইভেন্ট বা নোট)..."
+          className="flex-1 px-3 py-2 text-sm bg-transparent focus:outline-hidden text-slate-900 placeholder:text-slate-400 font-medium"
         />
 
         <button
           type="submit"
           disabled={!inputMessage.trim() || isLoading}
-          className="p-2.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white rounded-xl shadow-xs transition-all active:scale-95"
+          className="p-2.5 sm:p-3 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white rounded-xl shadow-xs transition-all active:scale-95 min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0 touch-manipulation"
           title="পাঠান"
         >
           <Send className="w-4 h-4" />
