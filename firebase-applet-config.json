@@ -3,6 +3,7 @@
   "appId": "1:14493362909:web:592c9e3503eee1420f0934",
   "apiKey": "AIzaSyACZ2KHN4VajTVw5-1cX4RIPeQ76iiTFpw",
   "authDomain": "gen-lang-client-0653199198.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-kromaproductivit-3ddd7fa7-953e-4240-81dd-979d35f25ce1",
   "storageBucket": "gen-lang-client-0653199198.firebasestorage.app",
   "messagingSenderId": "14493362909",
   "measurementId": "",

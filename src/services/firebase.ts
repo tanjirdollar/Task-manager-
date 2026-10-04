@@ -7,14 +7,27 @@ import {
   onAuthStateChanged, 
   User 
 } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 // Initialize Firebase App safely (singleton)
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+export const db = getFirestore(app, (firebaseConfig as any).firestoreDatabaseId);
+
+export async function testFirestoreConnection(): Promise<boolean> {
+  try {
+    await getDocFromServer(doc(db, 'test', 'connection'));
+    return true;
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('the client is offline')) {
+      console.warn('Firestore offline:', error.message);
+      return false;
+    }
+    return true;
+  }
+}
 
 // Configure Google Auth Provider with Calendar scopes
 const provider = new GoogleAuthProvider();

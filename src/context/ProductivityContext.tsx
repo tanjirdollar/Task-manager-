@@ -16,7 +16,8 @@ import {
   googleSignIn, 
   logout, 
   initAuth, 
-  getAccessToken 
+  getAccessToken,
+  testFirestoreConnection
 } from '../services/firebase';
 import { 
   fetchGoogleCalendarEvents, 
@@ -34,7 +35,8 @@ import {
   doc, 
   setDoc, 
   deleteDoc, 
-  onSnapshot 
+  onSnapshot,
+  getDocs
 } from 'firebase/firestore';
 import { User as FirebaseUser } from 'firebase/auth';
 
@@ -65,6 +67,7 @@ interface ProductivityContextType {
   // Cloud Synchronization
   isCloudSyncing: boolean;
   lastCloudSync: string | null;
+  refreshCloudData: () => Promise<void>;
 
   // Google Calendar Synchronization
   syncGoogleCalendar: () => Promise<void>;
@@ -413,65 +416,97 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
   useEffect(() => {
     if (!firebaseUser) return;
 
+    // Test Firestore connection on auth
+    testFirestoreConnection().catch(() => {});
+
     setIsCloudSyncing(true);
     const userId = firebaseUser.uid;
 
-    // Listen to user's tasks
+    let isInitialTasks = true;
+    let isInitialEvents = true;
+    let isInitialNotes = true;
+
+    // Listen to user's tasks in real-time
     const tasksCol = collection(db, 'users', userId, 'tasks');
     const unsubTasks = onSnapshot(tasksCol, (snapshot) => {
-      if (!snapshot.empty) {
-        const cloudTasks: Task[] = [];
-        snapshot.forEach(docSnap => {
-          cloudTasks.push({ id: docSnap.id, ...docSnap.data() } as Task);
-        });
-        setTasks(cloudTasks);
-        setLastCloudSync(new Date().toLocaleTimeString());
-      } else {
-        // If cloud is empty on first login, upload initial tasks to cloud
-        tasks.forEach(t => {
-          setDoc(doc(db, 'users', userId, 'tasks', t.id), t, { merge: true }).catch(() => {});
-        });
+      const cloudTasks: Task[] = [];
+      snapshot.forEach(docSnap => {
+        cloudTasks.push({ id: docSnap.id, ...docSnap.data() } as Task);
+      });
+
+      // On initial snapshot for a brand-new user whose cloud is empty:
+      if (isInitialTasks) {
+        isInitialTasks = false;
+        if (cloudTasks.length === 0 && tasks.length > 0) {
+          // Upload local items once to bootstrap user account
+          tasks.forEach(t => {
+            setDoc(doc(db, 'users', userId, 'tasks', t.id), t, { merge: true }).catch(err => {
+              console.error('Task bootstrap error:', err);
+            });
+          });
+          setIsCloudSyncing(false);
+          return;
+        }
       }
+
+      // Live update from Firestore: this applies additions, edits, and deletions instantly
+      cloudTasks.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+      setTasks(cloudTasks);
+      setLastCloudSync(new Date().toLocaleTimeString());
       setIsCloudSyncing(false);
     }, (error) => {
-      console.warn('Firestore tasks listener warning:', error.message);
+      console.error('Firestore tasks listener error:', error);
       setIsCloudSyncing(false);
     });
 
-    // Listen to user's events
+    // Listen to user's events in real-time
     const eventsCol = collection(db, 'users', userId, 'events');
     const unsubEvents = onSnapshot(eventsCol, (snapshot) => {
-      if (!snapshot.empty) {
-        const cloudEvents: CalendarEvent[] = [];
-        snapshot.forEach(docSnap => {
-          cloudEvents.push({ id: docSnap.id, ...docSnap.data() } as CalendarEvent);
-        });
-        setEvents(cloudEvents);
-      } else {
-        events.forEach(e => {
-          setDoc(doc(db, 'users', userId, 'events', e.id), e, { merge: true }).catch(() => {});
-        });
+      const cloudEvents: CalendarEvent[] = [];
+      snapshot.forEach(docSnap => {
+        cloudEvents.push({ id: docSnap.id, ...docSnap.data() } as CalendarEvent);
+      });
+
+      if (isInitialEvents) {
+        isInitialEvents = false;
+        if (cloudEvents.length === 0 && events.length > 0) {
+          events.forEach(e => {
+            setDoc(doc(db, 'users', userId, 'events', e.id), e, { merge: true }).catch(err => {
+              console.error('Event bootstrap error:', err);
+            });
+          });
+          return;
+        }
       }
+
+      setEvents(cloudEvents);
     }, (error) => {
-      console.warn('Firestore events listener warning:', error.message);
+      console.error('Firestore events listener error:', error);
     });
 
-    // Listen to user's notes
+    // Listen to user's notes in real-time
     const notesCol = collection(db, 'users', userId, 'notes');
     const unsubNotes = onSnapshot(notesCol, (snapshot) => {
-      if (!snapshot.empty) {
-        const cloudNotes: Note[] = [];
-        snapshot.forEach(docSnap => {
-          cloudNotes.push({ id: docSnap.id, ...docSnap.data() } as Note);
-        });
-        setNotes(cloudNotes);
-      } else {
-        notes.forEach(n => {
-          setDoc(doc(db, 'users', userId, 'notes', n.id), n, { merge: true }).catch(() => {});
-        });
+      const cloudNotes: Note[] = [];
+      snapshot.forEach(docSnap => {
+        cloudNotes.push({ id: docSnap.id, ...docSnap.data() } as Note);
+      });
+
+      if (isInitialNotes) {
+        isInitialNotes = false;
+        if (cloudNotes.length === 0 && notes.length > 0) {
+          notes.forEach(n => {
+            setDoc(doc(db, 'users', userId, 'notes', n.id), n, { merge: true }).catch(err => {
+              console.error('Note bootstrap error:', err);
+            });
+          });
+          return;
+        }
       }
+
+      setNotes(cloudNotes);
     }, (error) => {
-      console.warn('Firestore notes listener warning:', error.message);
+      console.error('Firestore notes listener error:', error);
     });
 
     return () => {
@@ -621,6 +656,45 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
       showToast('গুগল ক্যালেন্ডার সিঙ্ক করতে সমস্যা হয়েছে', 'error');
     } finally {
       setIsGoogleCalendarSyncing(false);
+    }
+  };
+
+  // Manual Cloud Data Refresh
+  const refreshCloudData = async () => {
+    if (!firebaseUser) {
+      showToast('ক্লাউড সিঙ্ক করতে প্রথমে Google লগইন করুন', 'info');
+      await signInWithGoogle();
+      return;
+    }
+    setIsCloudSyncing(true);
+    try {
+      const [tasksSnap, eventsSnap, notesSnap] = await Promise.all([
+        getDocs(collection(db, 'users', firebaseUser.uid, 'tasks')),
+        getDocs(collection(db, 'users', firebaseUser.uid, 'events')),
+        getDocs(collection(db, 'users', firebaseUser.uid, 'notes')),
+      ]);
+
+      const cloudTasks: Task[] = [];
+      tasksSnap.forEach(d => cloudTasks.push({ id: d.id, ...d.data() } as Task));
+      cloudTasks.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+      setTasks(cloudTasks);
+
+      const cloudEvents: CalendarEvent[] = [];
+      eventsSnap.forEach(d => cloudEvents.push({ id: d.id, ...d.data() } as CalendarEvent));
+      setEvents(cloudEvents);
+
+      const cloudNotes: Note[] = [];
+      notesSnap.forEach(d => cloudNotes.push({ id: d.id, ...d.data() } as Note));
+      setNotes(cloudNotes);
+
+      const timeStr = new Date().toLocaleTimeString();
+      setLastCloudSync(timeStr);
+      showToast('✓ ক্লাউড ডেটাবেজ থেকে রিয়েল-টাইমে সফলভাবে রিফ্রেশ হয়েছে!', 'success');
+    } catch (err) {
+      console.error('Cloud refresh error:', err);
+      showToast('ক্লাউড রিফ্রেশ করতে সমস্যা হয়েছে', 'error');
+    } finally {
+      setIsCloudSyncing(false);
     }
   };
 
@@ -916,6 +990,7 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
         dismissToast,
         isCloudSyncing,
         lastCloudSync,
+        refreshCloudData,
         syncGoogleCalendar,
         exportToGoogleCalendar,
         isGoogleCalendarSyncing,
