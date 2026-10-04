@@ -1,5 +1,42 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Task, CalendarEvent, Note, FocusSession, ActiveTab, Priority, Category, TaskStatus, UserProfile } from '../types';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { 
+  Task, 
+  CalendarEvent, 
+  Note, 
+  FocusSession, 
+  ActiveTab, 
+  Priority, 
+  Category, 
+  TaskStatus, 
+  UserProfile 
+} from '../types';
+import { 
+  auth, 
+  db, 
+  googleSignIn, 
+  logout, 
+  initAuth, 
+  getAccessToken 
+} from '../services/firebase';
+import { 
+  fetchGoogleCalendarEvents, 
+  createGoogleCalendarEvent, 
+  deleteGoogleCalendarEvent 
+} from '../services/googleCalendar';
+import { 
+  playAlarmSound, 
+  playChimeSound, 
+  requestNotificationPermission, 
+  sendTaskNotification 
+} from '../services/soundAlarm';
+import { 
+  collection, 
+  doc, 
+  setDoc, 
+  deleteDoc, 
+  onSnapshot 
+} from 'firebase/firestore';
+import { User as FirebaseUser } from 'firebase/auth';
 
 export interface ToastNotification {
   id: string;
@@ -8,13 +45,40 @@ export interface ToastNotification {
 }
 
 interface ProductivityContextType {
+  // User & Authentication
   user: UserProfile;
+  firebaseUser: FirebaseUser | null;
+  isAuthReady: boolean;
+  signInWithGoogle: () => Promise<void>;
+  signOutUser: () => Promise<void>;
+  isLoggingIn: boolean;
+
+  // Navigation & View
   activeTab: ActiveTab;
   setActiveTab: (tab: ActiveTab) => void;
+
   // Toast notifications
   toast: ToastNotification | null;
   showToast: (message: string, type?: 'success' | 'info' | 'error') => void;
   dismissToast: () => void;
+
+  // Cloud Synchronization
+  isCloudSyncing: boolean;
+  lastCloudSync: string | null;
+
+  // Google Calendar Synchronization
+  syncGoogleCalendar: () => Promise<void>;
+  exportToGoogleCalendar: (event: CalendarEvent) => Promise<void>;
+  isGoogleCalendarSyncing: boolean;
+
+  // Sound & Task Reminder Alarms
+  soundAlarmEnabled: boolean;
+  toggleSoundAlarm: () => void;
+  activeReminderTask: Task | null;
+  dismissReminder: () => void;
+  snoozeReminder: (taskId: string, minutes: number) => void;
+  testAlarm: () => void;
+
   // Tasks
   tasks: Task[];
   addTask: (task: Omit<Task, 'id' | 'createdAt'>) => Task;
@@ -22,22 +86,26 @@ interface ProductivityContextType {
   deleteTask: (id: string) => void;
   toggleTaskStatus: (id: string) => void;
   toggleSubtask: (taskId: string, subtaskId: string) => void;
+
   // Events
   events: CalendarEvent[];
   addEvent: (event: Omit<CalendarEvent, 'id'>) => CalendarEvent;
   updateEvent: (id: string, updates: Partial<CalendarEvent>) => void;
   deleteEvent: (id: string) => void;
+
   // Notes
   notes: Note[];
   addNote: (note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>) => Note;
   updateNote: (id: string, updates: Partial<Note>) => void;
   deleteNote: (id: string) => void;
   togglePinNote: (id: string) => void;
+
   // Focus Sessions
   focusSessions: FocusSession[];
   logFocusSession: (minutes: number, taskId?: string) => void;
   activeFocusTaskId: string | null;
   setActiveFocusTaskId: (taskId: string | null) => void;
+
   // Metrics & Helpers
   todayFocusMinutes: number;
   completedTasksCount: number;
@@ -50,13 +118,12 @@ interface ProductivityContextType {
 
 const ProductivityContext = createContext<ProductivityContextType | undefined>(undefined);
 
-// Helper to convert English digits to Bengali digits
+// Helpers
 export const toBengaliNumber = (num: number | string): string => {
   const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
   return String(num).replace(/[0-9]/g, d => bengaliDigits[parseInt(d, 10)]);
 };
 
-// Helper to format ISO date YYYY-MM-DD in local time
 export const getTodayStr = () => {
   const d = new Date();
   const year = d.getFullYear();
@@ -74,7 +141,6 @@ export const getOffsetDateStr = (daysOffset: number) => {
   return `${year}-${month}-${day}`;
 };
 
-// Bengali Date formatting helper
 export const formatBengaliDate = (dateStr: string): string => {
   try {
     const d = new Date(dateStr + (dateStr.length === 10 ? 'T00:00:00' : ''));
@@ -100,9 +166,10 @@ const defaultUser: UserProfile = {
   email: 'tanjir.dollar@gmail.com',
   role: 'প্রোডাক্ট ও সফটওয়্যার লিড',
   initials: 'TD',
+  isGoogleUser: false,
 };
 
-// Initial realistic Bengali seed tasks for Tanjir
+// Seed data
 const initialTasks: Task[] = [
   {
     id: 't-1',
@@ -112,6 +179,7 @@ const initialTasks: Task[] = [
     status: 'in_progress',
     category: 'ইঞ্জিনিয়ারিং',
     dueDate: getTodayStr(),
+    reminderTime: '10:00',
     estimatedMinutes: 60,
     subtasks: [
       { id: 'st-1', title: 'বেঞ্চমার্ক ল্যাটেন্সি ডেটা সংকলন করা', completed: true },
@@ -128,6 +196,7 @@ const initialTasks: Task[] = [
     status: 'todo',
     category: 'ডিজাইন',
     dueDate: getTodayStr(),
+    reminderTime: '14:30',
     estimatedMinutes: 45,
     subtasks: [
       { id: 'st-4', title: 'ফোকাস রিং স্টাইল ভেরিফাই করা', completed: false },
@@ -151,29 +220,14 @@ const initialTasks: Task[] = [
   },
   {
     id: 't-4',
-    title: 'ডেটাবেজ ইনডেক্স অপটিমাইজেশন',
-    description: 'কোয়েরি এক্সিকিউশন টাইম ১৫ মিলি-সেকেন্ডের নিচে নামিয়ে আনা।',
+    title: 'রাত ১১:০০ টায় মেডিটেশন ও মানসিক প্রশান্তি',
+    description: 'দিনের ক্লান্তি দূর করতে ১৫ মিনিটের শান্ত মেডিটেশন সেশন।',
     priority: 'high',
-    status: 'completed',
-    category: 'ইঞ্জিনিয়ারিং',
-    dueDate: getOffsetDateStr(-1),
-    estimatedMinutes: 45,
-    completedAt: new Date().toISOString(),
-    subtasks: [
-      { id: 'st-7', title: 'EXPLAIN ANALYZE দিয়ে স্লো কুয়েরি চেক করা', completed: true },
-      { id: 'st-8', title: 'স্টেজিয়ে কম্পোজিট ইনডেক্স প্রয়োগ করা', completed: true },
-    ],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 't-5',
-    title: 'সাপ্তাহিক শরীরচর্চা ও রিকভারি ওয়াক',
-    description: 'গভীর কাজের ব্লকের পর ৩০ মিনিট সান্ধ্যকালীন হাঁটা ও হালকা স্ট্রেচিং।',
-    priority: 'low',
     status: 'todo',
     category: 'ব্যক্তিগত',
-    dueDate: getOffsetDateStr(2),
-    estimatedMinutes: 30,
+    dueDate: getTodayStr(),
+    reminderTime: '23:00',
+    estimatedMinutes: 15,
     subtasks: [],
     createdAt: new Date().toISOString(),
   },
@@ -200,102 +254,21 @@ const initialEvents: CalendarEvent[] = [
     location: 'ওয়ার্কস্টেশন / ফোকাস জোন',
     type: 'focus',
   },
-  {
-    id: 'e-3',
-    title: 'ডিজাইন সিস্টেম ও ইউএক্স রিভিউ',
-    description: 'রেসপনসিভ ব্রেকপয়েন্ট ও কম্পোনেন্ট লাইব্রেরি নিয়ে টিম সেশন।',
-    date: getTodayStr(),
-    startTime: '১৪:০০',
-    endTime: '১৫:০০',
-    location: 'ডিজাইন স্টুডিও বি',
-    type: 'workshop',
-  },
-  {
-    id: 'e-4',
-    title: 'স্প্রিন্ট ডেমো ও স্টেকহোল্ডার ব্রিফিং',
-    description: 'চলতি স্প্রিন্টের অগ্রগতি ও রিলিজ ক্যান্ডিডেট উপস্থাপন।',
-    date: getOffsetDateStr(2),
-    startTime: '১১:০০',
-    endTime: '১২:০০',
-    location: 'কনফারেন্স হল ১',
-    type: 'meeting',
-  },
-  {
-    id: 'e-5',
-    title: 'স্প্রিন্ট ডেলিভারেবল ফাইনাল ডেডলাইন',
-    description: 'কোড ফ্রিজ ও প্রোডাকশন রিলিজ সম্পন্ন করা।',
-    date: getOffsetDateStr(4),
-    startTime: '১৭:০০',
-    endTime: '১৭:৩০',
-    location: 'ডিপ্লয়মেন্ট পাইপলাইন',
-    type: 'deadline',
-  },
 ];
 
 const initialNotes: Note[] = [
   {
     id: 'n-1',
-    title: 'প্রোডাক্ট আর্কিটেকচারের মূল মূলনীতি ২০২৬',
-    content: `## মূল নির্দেশিকা
+    title: 'উচ্চ-উৎপাদনশীল টিম কালচার ও সিস্টেম ডিজাইন',
+    content: `## মূলনীতিসমূহ
 - **সরলতাই শ্রেষ্ঠ**: অপ্রয়োজনীয় ধাপ পরিহার করে মূল কাজে মনোনিবেশ করুন।
 - **ল্যাটেন্সি নিয়ন্ত্রণ**: ইউজার ইন্টারফেসে ১০০ মিলি-সেকেন্ডের নিচে তাৎক্ষণিক রেসপন্স নিশ্চিত করতে হবে।
-- **গভীর কাজের নীতি**: মিটিংগুলো দুপুরের পরে রাখুন; সকালের মূল্যবান সময় কঠিন চিন্তাশীল কাজের জন্য সুরক্ষিত রাখুন।
-- **চেকলিস্ট ব্যবহার**: যেসব কাজ একাধিকবার করতে হয়, তার জন্য পুনরাবৃত্তিমূলক চেকলিস্ট তৈরি করুন।`,
+- **গভীর কাজের নীতি**: মিটিংগুলো দুপুরের পরে রাখুন; সকালের মূল্যবান সময় কঠিন চিন্তাশীল কাজের জন্য সুরক্ষিত রাখুন।`,
     category: 'স্ট্র্যাটেজি',
     tags: ['আর্কিটেকচার', 'গাইডলাইন', 'উৎপাদনশীলতা'],
     pinned: true,
     updatedAt: new Date().toISOString(),
     createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'n-2',
-    title: 'স্প্রিন্ট রেট্রোস্পেক্টিভ পর্যালোচনা',
-    content: `### যা ভালো হয়েছে
-- বিল্ড ক্যাশ অপটিমাইজেশনের মাধ্যমে সিআই/সিডি সময় ৪০% কমেছে।
-- ডিজাইন ও ইঞ্জিনিয়ারিং টিমের মধ্যে কাজের সমন্বয় খুব মসৃণ ছিল।
-
-### করণীয়
-১. থার্ড পার্টি এপিআই এর জন্য মক টেস্টিং চালু করা।
-২. ৫০ মিনিটের ডিপ-ফোকাস ইন্টারভ্যাল অনুসরণ করা।`,
-    category: 'কাজ',
-    tags: ['স্প্রিন্ট', 'পর্যালোচনা', 'ইঞ্জিনিয়ারিং'],
-    pinned: true,
-    updatedAt: new Date(Date.now() - 3600000 * 5).toISOString(),
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'n-3',
-    title: 'আইডিয়া: গভীর কাজের জন্য অ্যাম্বিয়েন্ট সাউন্ডস্কেপ',
-    content: `পিঙ্ক নয়েজের সাথে সূক্ষ্ম লো-পাস ফিল্টার মানসিক ক্লান্তি দূর করে এবং দীর্ঘক্ষণ ফোকাস ধরে রাখতে সাহায্য করে।`,
-    category: 'আইডিয়া',
-    tags: ['আইডিয়া', 'ফোকাস', 'সাউন্ডস্কেপ'],
-    pinned: false,
-    updatedAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-    createdAt: new Date().toISOString(),
-  },
-];
-
-const initialFocusSessions: FocusSession[] = [
-  {
-    id: 'fs-1',
-    date: getTodayStr(),
-    minutes: 25,
-    taskId: 't-1',
-    completedAt: new Date().toISOString(),
-  },
-  {
-    id: 'fs-2',
-    date: getTodayStr(),
-    minutes: 25,
-    taskId: 't-1',
-    completedAt: new Date().toISOString(),
-  },
-  {
-    id: 'fs-3',
-    date: getOffsetDateStr(-1),
-    minutes: 50,
-    taskId: 't-4',
-    completedAt: new Date(Date.now() - 86400000).toISOString(),
   },
 ];
 
@@ -305,28 +278,49 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [activeFocusTaskId, setActiveFocusTaskId] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastNotification | null>(null);
 
+  // Auth states
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [isAuthReady, setIsAuthReady] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [user, setUser] = useState<UserProfile>(() => {
+    try {
+      const saved = localStorage.getItem('kroma_user_profile');
+      return saved ? JSON.parse(saved) : defaultUser;
+    } catch {
+      return defaultUser;
+    }
+  });
+
+  // Cloud & Calendar sync states
+  const [isCloudSyncing, setIsCloudSyncing] = useState(false);
+  const [lastCloudSync, setLastCloudSync] = useState<string | null>(null);
+  const [isGoogleCalendarSyncing, setIsGoogleCalendarSyncing] = useState(false);
+
+  // Sound Alarm & Reminder states
+  const [soundAlarmEnabled, setSoundAlarmEnabled] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('kroma_sound_alarm') !== 'false';
+    } catch {
+      return true;
+    }
+  });
+  const [activeReminderTask, setActiveReminderTask] = useState<Task | null>(null);
+  const triggeredTaskIdsRef = useRef<Set<string>>(new Set());
+
   const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
     const id = `toast-${Date.now()}`;
     setToast({ id, message, type });
   };
 
-  const dismissToast = () => {
-    setToast(null);
-  };
+  const dismissToast = () => setToast(null);
 
-  // Auto-dismiss toast
   useEffect(() => {
     if (!toast) return;
-    const timer = setTimeout(() => {
-      setToast(null);
-    }, 3500);
+    const timer = setTimeout(() => setToast(null), 3500);
     return () => clearTimeout(timer);
   }, [toast]);
 
-  // User details
-  const [user] = useState<UserProfile>(defaultUser);
-
-  // Load from local storage or fallback to seed data
+  // Tasks, Events, Notes local states
   const [tasks, setTasks] = useState<Task[]>(() => {
     try {
       const saved = localStorage.getItem('kroma_tasks_bn');
@@ -357,13 +351,13 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [focusSessions, setFocusSessions] = useState<FocusSession[]>(() => {
     try {
       const saved = localStorage.getItem('kroma_focus_sessions_bn');
-      return saved ? JSON.parse(saved) : initialFocusSessions;
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return initialFocusSessions;
+      return [];
     }
   });
 
-  // Sync to local storage
+  // Local storage synchronization
   useEffect(() => {
     localStorage.setItem('kroma_tasks_bn', JSON.stringify(tasks));
   }, [tasks]);
@@ -380,6 +374,283 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
     localStorage.setItem('kroma_focus_sessions_bn', JSON.stringify(focusSessions));
   }, [focusSessions]);
 
+  useEffect(() => {
+    localStorage.setItem('kroma_user_profile', JSON.stringify(user));
+  }, [user]);
+
+  // Initialize Firebase Auth listener
+  useEffect(() => {
+    const unsubscribe = initAuth(
+      (fUser) => {
+        setFirebaseUser(fUser);
+        setIsAuthReady(true);
+        const nameParts = (fUser.displayName || defaultUser.name).split(' ');
+        const initials = nameParts.length > 1 
+          ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
+          : (fUser.displayName || 'TD').slice(0, 2).toUpperCase();
+
+        setUser({
+          name: fUser.displayName || defaultUser.name,
+          email: fUser.email || defaultUser.email,
+          role: 'গুগল প্রোফাইল',
+          initials,
+          uid: fUser.uid,
+          photoURL: fUser.photoURL || undefined,
+          isGoogleUser: true,
+          googleCalendarConnected: true,
+        });
+      },
+      () => {
+        setFirebaseUser(null);
+        setIsAuthReady(true);
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
+
+  // FIRESTORE REAL-TIME TWO-WAY DATA SYNC (When user is logged in)
+  useEffect(() => {
+    if (!firebaseUser) return;
+
+    setIsCloudSyncing(true);
+    const userId = firebaseUser.uid;
+
+    // Listen to user's tasks
+    const tasksCol = collection(db, 'users', userId, 'tasks');
+    const unsubTasks = onSnapshot(tasksCol, (snapshot) => {
+      if (!snapshot.empty) {
+        const cloudTasks: Task[] = [];
+        snapshot.forEach(docSnap => {
+          cloudTasks.push({ id: docSnap.id, ...docSnap.data() } as Task);
+        });
+        setTasks(cloudTasks);
+        setLastCloudSync(new Date().toLocaleTimeString());
+      } else {
+        // If cloud is empty on first login, upload initial tasks to cloud
+        tasks.forEach(t => {
+          setDoc(doc(db, 'users', userId, 'tasks', t.id), t, { merge: true }).catch(() => {});
+        });
+      }
+      setIsCloudSyncing(false);
+    }, (error) => {
+      console.warn('Firestore tasks listener warning:', error.message);
+      setIsCloudSyncing(false);
+    });
+
+    // Listen to user's events
+    const eventsCol = collection(db, 'users', userId, 'events');
+    const unsubEvents = onSnapshot(eventsCol, (snapshot) => {
+      if (!snapshot.empty) {
+        const cloudEvents: CalendarEvent[] = [];
+        snapshot.forEach(docSnap => {
+          cloudEvents.push({ id: docSnap.id, ...docSnap.data() } as CalendarEvent);
+        });
+        setEvents(cloudEvents);
+      } else {
+        events.forEach(e => {
+          setDoc(doc(db, 'users', userId, 'events', e.id), e, { merge: true }).catch(() => {});
+        });
+      }
+    }, (error) => {
+      console.warn('Firestore events listener warning:', error.message);
+    });
+
+    // Listen to user's notes
+    const notesCol = collection(db, 'users', userId, 'notes');
+    const unsubNotes = onSnapshot(notesCol, (snapshot) => {
+      if (!snapshot.empty) {
+        const cloudNotes: Note[] = [];
+        snapshot.forEach(docSnap => {
+          cloudNotes.push({ id: docSnap.id, ...docSnap.data() } as Note);
+        });
+        setNotes(cloudNotes);
+      } else {
+        notes.forEach(n => {
+          setDoc(doc(db, 'users', userId, 'notes', n.id), n, { merge: true }).catch(() => {});
+        });
+      }
+    }, (error) => {
+      console.warn('Firestore notes listener warning:', error.message);
+    });
+
+    return () => {
+      unsubTasks();
+      unsubEvents();
+      unsubNotes();
+    };
+  }, [firebaseUser]);
+
+  // TASK REMINDER & ALARM ENGINE
+  useEffect(() => {
+    // Request permission once on interaction
+    requestNotificationPermission().catch(() => {});
+
+    const interval = setInterval(() => {
+      const now = new Date();
+      const currentHours = String(now.getHours()).padStart(2, '0');
+      const currentMins = String(now.getMinutes()).padStart(2, '0');
+      const currentTimeStr = `${currentHours}:${currentMins}`;
+      const today = getTodayStr();
+
+      tasks.forEach(task => {
+        if (
+          task.status !== 'completed' &&
+          task.reminderTime &&
+          task.dueDate <= today &&
+          !triggeredTaskIdsRef.current.has(task.id)
+        ) {
+          // Compare times
+          if (currentTimeStr >= task.reminderTime) {
+            triggeredTaskIdsRef.current.add(task.id);
+            setActiveReminderTask(task);
+
+            if (soundAlarmEnabled) {
+              playAlarmSound();
+            }
+
+            sendTaskNotification(
+              `🔔 টাস্ক রিমাইন্ডার: ${task.title}`,
+              `কাজের সময় হয়েছে (${task.reminderTime})! ক্যাটাগরি: ${task.category}`
+            );
+          }
+        }
+      });
+    }, 15000); // Check every 15 seconds
+
+    return () => clearInterval(interval);
+  }, [tasks, soundAlarmEnabled]);
+
+  const toggleSoundAlarm = () => {
+    setSoundAlarmEnabled(prev => {
+      const next = !prev;
+      localStorage.setItem('kroma_sound_alarm', String(next));
+      if (next) {
+        playChimeSound();
+        showToast('রিমাইন্ডার সাউন্ড অ্যালার্ম চালু করা হয়েছে', 'success');
+      } else {
+        showToast('রিমাইন্ডার সাউন্ড মিউট করা হয়েছে', 'info');
+      }
+      return next;
+    });
+  };
+
+  const testAlarm = () => {
+    playAlarmSound();
+    showToast('অ্যালার্ম সাউন্ড পরীক্ষা সম্পন্ন হয়েছে', 'info');
+  };
+
+  const dismissReminder = () => {
+    setActiveReminderTask(null);
+  };
+
+  const snoozeReminder = (taskId: string, minutes: number) => {
+    const now = new Date(Date.now() + minutes * 60000);
+    const h = String(now.getHours()).padStart(2, '0');
+    const m = String(now.getMinutes()).padStart(2, '0');
+    const newTime = `${h}:${m}`;
+
+    updateTask(taskId, { reminderTime: newTime, reminderTriggered: false });
+    triggeredTaskIdsRef.current.delete(taskId);
+    setActiveReminderTask(null);
+    showToast(`টাস্কটি ${toBengaliNumber(minutes)} মিনিটের জন্য স্নুজ করা হয়েছে (${newTime})`, 'info');
+  };
+
+  // Google Login / Logout
+  const signInWithGoogle = async () => {
+    setIsLoggingIn(true);
+    try {
+      const result = await googleSignIn();
+      if (result) {
+        showToast(`স্বাগতম, ${result.user.displayName || 'তানজির'}! গুগল অ্যাকাউন্টে লগইন সফল হয়েছে।`, 'success');
+        // Trigger calendar sync automatically after login
+        if (result.accessToken) {
+          setTimeout(() => syncGoogleCalendar(), 800);
+        }
+      }
+    } catch (err: any) {
+      console.error('Google Sign-In failed:', err);
+      showToast('গুগল লগইন সম্পন্ন করা যায়নি। পুনরায় চেষ্টা করুন।', 'error');
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const signOutUser = async () => {
+    try {
+      await logout();
+      setFirebaseUser(null);
+      setUser(defaultUser);
+      showToast('সফলভাবে লগআউট করা হয়েছে', 'info');
+    } catch (err) {
+      console.error('Sign out failed:', err);
+    }
+  };
+
+  // Google Calendar Synchronization
+  const syncGoogleCalendar = async () => {
+    try {
+      setIsGoogleCalendarSyncing(true);
+      const token = await getAccessToken();
+
+      if (!token) {
+        showToast('গুগল ক্যালেন্ডার সিঙ্ক করতে প্রথমে গুগল লগইন করুন', 'info');
+        await signInWithGoogle();
+        return;
+      }
+
+      const googleEvents = await fetchGoogleCalendarEvents(token);
+      
+      // Merge with local events avoiding duplicates
+      setEvents(prev => {
+        const nonGoogleEvents = prev.filter(e => !e.id.startsWith('gcal-'));
+        const merged = [...nonGoogleEvents, ...googleEvents];
+        // Also persist to Firestore if logged in
+        if (firebaseUser) {
+          googleEvents.forEach(evt => {
+            setDoc(doc(db, 'users', firebaseUser.uid, 'events', evt.id), evt, { merge: true }).catch(() => {});
+          });
+        }
+        return merged;
+      });
+
+      showToast(`✓ ${toBengaliNumber(googleEvents.length)}টি গুগল ক্যালেন্ডার ইভেন্ট সিঙ্ক হয়েছে!`, 'success');
+      playChimeSound();
+    } catch (err: any) {
+      console.error('Google Calendar Sync Error:', err);
+      showToast('গুগল ক্যালেন্ডার সিঙ্ক করতে সমস্যা হয়েছে', 'error');
+    } finally {
+      setIsGoogleCalendarSyncing(false);
+    }
+  };
+
+  const exportToGoogleCalendar = async (event: CalendarEvent) => {
+    try {
+      const token = await getAccessToken();
+      if (!token) {
+        showToast('গুগল ক্যালেন্ডারে এক্সপোর্ট করতে প্রথমে গুগল লগইন করুন', 'info');
+        await signInWithGoogle();
+        return;
+      }
+
+      const res = await createGoogleCalendarEvent(token, {
+        title: event.title,
+        description: event.description,
+        date: event.date,
+        startTime: event.startTime,
+        endTime: event.endTime,
+        location: event.location,
+      });
+
+      updateEvent(event.id, { googleEventId: res.id, isGoogleEvent: true });
+      showToast('✓ গুগল ক্যালেন্ডারে সফলভাবে ইভেন্ট যোগ করা হয়েছে!', 'success');
+      playChimeSound();
+    } catch (err: any) {
+      console.error('Export event error:', err);
+      showToast('গুগল ক্যালেন্ডারে এক্সপোর্ট ব্যর্থ হয়েছে', 'error');
+    }
+  };
+
   // Task Actions
   const addTask = (newTask: Omit<Task, 'id' | 'createdAt'>): Task => {
     const task: Task = {
@@ -387,7 +658,14 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
       id: `task-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       createdAt: new Date().toISOString(),
     };
+
     setTasks(prev => [task, ...prev]);
+
+    // Save to Firestore if authenticated
+    if (firebaseUser) {
+      setDoc(doc(db, 'users', firebaseUser.uid, 'tasks', task.id), task, { merge: true }).catch(() => {});
+    }
+
     showToast('নতুন টাস্ক সফলভাবে তৈরি হয়েছে', 'success');
     return task;
   };
@@ -402,6 +680,10 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
           } else if (updates.status && updates.status !== 'completed') {
             updated.completedAt = undefined;
           }
+          // Save to Firestore if authenticated
+          if (firebaseUser) {
+            setDoc(doc(db, 'users', firebaseUser.uid, 'tasks', id), updated, { merge: true }).catch(() => {});
+          }
           return updated;
         }
         return t;
@@ -415,6 +697,10 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
     if (activeFocusTaskId === id) {
       setActiveFocusTaskId(null);
     }
+    // Delete from Firestore if authenticated
+    if (firebaseUser) {
+      deleteDoc(doc(db, 'users', firebaseUser.uid, 'tasks', id)).catch(() => {});
+    }
     showToast('টাস্ক মুছে ফেলা হয়েছে', 'info');
   };
 
@@ -424,16 +710,23 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
         if (t.id === id) {
           const isDone = t.status === 'completed';
           const nextStatus: TaskStatus = isDone ? 'todo' : 'completed';
-          if (!isDone) {
-            showToast('অভিনন্দন! টাস্ক সম্পন্ন হয়েছে', 'success');
-          } else {
-            showToast('টাস্ক পুনরায় প্রক্রিয়াধীন হিসেবে সেট করা হয়েছে', 'info');
-          }
-          return {
+          const updated = {
             ...t,
             status: nextStatus,
             completedAt: isDone ? undefined : new Date().toISOString(),
           };
+
+          if (!isDone) {
+            showToast('অভিনন্দন! টাস্ক সম্পন্ন হয়েছে', 'success');
+            playChimeSound();
+          } else {
+            showToast('টাস্ক পুনরায় প্রক্রিয়াধীন হিসেবে সেট করা হয়েছে', 'info');
+          }
+
+          if (firebaseUser) {
+            setDoc(doc(db, 'users', firebaseUser.uid, 'tasks', id), updated, { merge: true }).catch(() => {});
+          }
+          return updated;
         }
         return t;
       })
@@ -448,12 +741,17 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
             st.id === subtaskId ? { ...st, completed: !st.completed } : st
           );
           const allCompleted = nextSubtasks.length > 0 && nextSubtasks.every(st => st.completed);
-          return {
+          const updated = {
             ...t,
             subtasks: nextSubtasks,
-            status: allCompleted ? 'completed' : t.status === 'completed' ? 'in_progress' : t.status,
-            completedAt: allCompleted ? (t.completedAt || new Date().toISOString()) : undefined,
+            status: allCompleted ? ('completed' as TaskStatus) : t.status,
+            completedAt: allCompleted ? new Date().toISOString() : t.completedAt,
           };
+
+          if (firebaseUser) {
+            setDoc(doc(db, 'users', firebaseUser.uid, 'tasks', taskId), updated, { merge: true }).catch(() => {});
+          }
+          return updated;
         }
         return t;
       })
@@ -466,78 +764,132 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
       ...newEvent,
       id: `evt-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
     };
-    setEvents(prev => [...prev, event].sort((a, b) => `${a.date} ${a.startTime}`.localeCompare(`${b.date} ${b.startTime}`)));
-    showToast('ইভেন্ট সফলভাবে শিডিউল করা হয়েছে', 'success');
+
+    setEvents(prev => [...prev, event]);
+
+    if (firebaseUser) {
+      setDoc(doc(db, 'users', firebaseUser.uid, 'events', event.id), event, { merge: true }).catch(() => {});
+    }
+
+    showToast('নতুন ইভেন্ট শিডিউল করা হয়েছে', 'success');
     return event;
   };
 
   const updateEvent = (id: string, updates: Partial<CalendarEvent>) => {
     setEvents(prev =>
-      prev.map(e => (e.id === id ? { ...e, ...updates } : e))
-        .sort((a, b) => `${a.date} ${a.startTime}`.localeCompare(`${b.date} ${b.startTime}`))
+      prev.map(e => {
+        if (e.id === id) {
+          const updated = { ...e, ...updates };
+          if (firebaseUser) {
+            setDoc(doc(db, 'users', firebaseUser.uid, 'events', id), updated, { merge: true }).catch(() => {});
+          }
+          return updated;
+        }
+        return e;
+      })
     );
-    showToast('ইভেন্ট আপডেট করা হয়েছে', 'success');
+    showToast('ইভেন্টের তথ্য হালনাগাদ করা হয়েছে', 'success');
   };
 
-  const deleteEvent = (id: string) => {
+  const deleteEvent = async (id: string) => {
+    const target = events.find(e => e.id === id);
     setEvents(prev => prev.filter(e => e.id !== id));
+
+    if (firebaseUser) {
+      deleteDoc(doc(db, 'users', firebaseUser.uid, 'events', id)).catch(() => {});
+    }
+
+    // If it was a Google Calendar event, delete remotely too
+    if (target?.id.startsWith('gcal-') || target?.googleEventId) {
+      const token = await getAccessToken();
+      if (token) {
+        deleteGoogleCalendarEvent(token, target.googleEventId || target.id).catch(() => {});
+      }
+    }
+
     showToast('ইভেন্ট মুছে ফেলা হয়েছে', 'info');
   };
 
   // Note Actions
   const addNote = (newNote: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>): Note => {
-    const now = new Date().toISOString();
     const note: Note = {
       ...newNote,
-      tags: newNote.tags || [],
       id: `note-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-      createdAt: now,
-      updatedAt: now,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
+
     setNotes(prev => [note, ...prev]);
+
+    if (firebaseUser) {
+      setDoc(doc(db, 'users', firebaseUser.uid, 'notes', note.id), note, { merge: true }).catch(() => {});
+    }
+
     showToast('নোট সফলভাবে সংরক্ষণ করা হয়েছে', 'success');
     return note;
   };
 
   const updateNote = (id: string, updates: Partial<Note>) => {
     setNotes(prev =>
-      prev.map(n =>
-        n.id === id
-          ? { ...n, ...updates, updatedAt: new Date().toISOString() }
-          : n
-      )
+      prev.map(n => {
+        if (n.id === id) {
+          const updated = {
+            ...n,
+            ...updates,
+            updatedAt: new Date().toISOString(),
+          };
+          if (firebaseUser) {
+            setDoc(doc(db, 'users', firebaseUser.uid, 'notes', id), updated, { merge: true }).catch(() => {});
+          }
+          return updated;
+        }
+        return n;
+      })
     );
-    showToast('নোট আপডেট করা হয়েছে', 'success');
+    showToast('নোটের পরিবর্তন সংরক্ষিত হয়েছে', 'success');
   };
 
   const deleteNote = (id: string) => {
     setNotes(prev => prev.filter(n => n.id !== id));
+    if (firebaseUser) {
+      deleteDoc(doc(db, 'users', firebaseUser.uid, 'notes', id)).catch(() => {});
+    }
     showToast('নোট মুছে ফেলা হয়েছে', 'info');
   };
 
   const togglePinNote = (id: string) => {
     setNotes(prev =>
-      prev.map(n =>
-        n.id === id ? { ...n, pinned: !n.pinned, updatedAt: new Date().toISOString() } : n
-      )
+      prev.map(n => {
+        if (n.id === id) {
+          const updated = { ...n, pinned: !n.pinned, updatedAt: new Date().toISOString() };
+          if (firebaseUser) {
+            setDoc(doc(db, 'users', firebaseUser.uid, 'notes', id), updated, { merge: true }).catch(() => {});
+          }
+          return updated;
+        }
+        return n;
+      })
     );
   };
 
-  // Focus Session Actions
+  // Focus Session
   const logFocusSession = (minutes: number, taskId?: string) => {
     const session: FocusSession = {
       id: `fs-${Date.now()}`,
       date: getTodayStr(),
       minutes,
-      taskId: taskId || activeFocusTaskId || undefined,
+      taskId,
       completedAt: new Date().toISOString(),
     };
+
     setFocusSessions(prev => [session, ...prev]);
-    showToast(`${toBengaliNumber(minutes)} মিনিটের ফোকাস সেশন সফলভাবে সম্পন্ন!`, 'success');
+    showToast(`অভিনন্দন! ${toBengaliNumber(minutes)} মিনিটের ফোকাস সেশন সফল হয়েছে`, 'success');
+    playChimeSound();
   };
 
-  // Metrics
+  // Derived Metrics
   const todayStr = getTodayStr();
+
   const todayFocusMinutes = focusSessions
     .filter(s => s.date === todayStr)
     .reduce((acc, curr) => acc + curr.minutes, 0);
@@ -545,27 +897,34 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const completedTasksCount = tasks.filter(t => t.status === 'completed').length;
   const pendingTasksCount = tasks.filter(t => t.status !== 'completed').length;
 
-  const todayTasks = tasks.filter(t => 
-    t.status !== 'completed' && (
-      t.dueDate <= todayStr || 
-      t.status === 'in_progress' || 
-      (t.createdAt && t.createdAt.split('T')[0] === todayStr)
-    )
-  );
-
-  const todayEvents = events
-    .filter(e => e.date === todayStr)
-    .sort((a, b) => a.startTime.localeCompare(b.startTime));
+  const todayTasks = tasks.filter(t => t.dueDate === todayStr);
+  const todayEvents = events.filter(e => e.date === todayStr);
 
   return (
     <ProductivityContext.Provider
       value={{
         user,
+        firebaseUser,
+        isAuthReady,
+        signInWithGoogle,
+        signOutUser,
+        isLoggingIn,
         activeTab,
         setActiveTab,
         toast,
         showToast,
         dismissToast,
+        isCloudSyncing,
+        lastCloudSync,
+        syncGoogleCalendar,
+        exportToGoogleCalendar,
+        isGoogleCalendarSyncing,
+        soundAlarmEnabled,
+        toggleSoundAlarm,
+        activeReminderTask,
+        dismissReminder,
+        snoozeReminder,
+        testAlarm,
         tasks,
         addTask,
         updateTask,
@@ -599,7 +958,7 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
   );
 };
 
-export const useProductivity = () => {
+export const useProductivity = (): ProductivityContextType => {
   const context = useContext(ProductivityContext);
   if (!context) {
     throw new Error('useProductivity must be used within a ProductivityProvider');

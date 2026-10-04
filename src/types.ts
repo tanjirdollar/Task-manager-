@@ -9,6 +9,10 @@ export interface UserProfile {
   email: string;
   role: string;
   initials: string;
+  uid?: string;
+  photoURL?: string;
+  isGoogleUser?: boolean;
+  googleCalendarConnected?: boolean;
 }
 
 export interface Subtask {
@@ -26,6 +30,8 @@ export interface Task {
   category: Category;
   dueDate: string; // YYYY-MM-DD
   estimatedMinutes?: number;
+  reminderTime?: string; // HH:mm or timestamp
+  reminderTriggered?: boolean;
   subtasks: Subtask[];
   completedAt?: string;
   createdAt: string;
@@ -43,6 +49,8 @@ export interface CalendarEvent {
   location?: string;
   type: EventType;
   color?: string;
+  googleEventId?: string;
+  isGoogleEvent?: boolean;
 }
 
 export interface Note {

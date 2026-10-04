@@ -12,7 +12,10 @@ import {
   AlignLeft, 
   CheckCircle2, 
   Circle,
-  Tag
+  Tag,
+  RefreshCw,
+  UploadCloud,
+  Cloud
 } from 'lucide-react';
 import { useProductivity, getTodayStr, toBengaliNumber, formatBengaliDate } from '../../context/ProductivityContext';
 import { CalendarEvent, EventType } from '../../types';
@@ -28,7 +31,16 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   onOpenNewTask,
   onEditEvent,
 }) => {
-  const { events, tasks, deleteEvent, toggleTaskStatus } = useProductivity();
+  const { 
+    events, 
+    tasks, 
+    deleteEvent, 
+    toggleTaskStatus, 
+    syncGoogleCalendar, 
+    exportToGoogleCalendar, 
+    isGoogleCalendarSyncing, 
+    firebaseUser 
+  } = useProductivity();
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDateStr, setSelectedDateStr] = useState<string>(getTodayStr());
@@ -170,6 +182,17 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
+
+          {/* Google Calendar Sync Button */}
+          <button
+            onClick={syncGoogleCalendar}
+            disabled={isGoogleCalendarSyncing}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-xl transition-all whitespace-nowrap active:scale-95 touch-manipulation"
+            title="গুগল ক্যালেন্ডারের সাথে সিঙ্ক করুন"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-sky-600 ${isGoogleCalendarSyncing ? 'animate-spin' : ''}`} />
+            <span>{isGoogleCalendarSyncing ? 'সিঙ্ক হচ্ছে...' : 'Google Calendar সিঙ্ক'}</span>
+          </button>
 
           {/* Add Event Button for Selected Date */}
           <button
@@ -437,6 +460,26 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                         <div className="flex items-center gap-1">
                           {getEventTypeBadge(evt.type)}
 
+                          {/* Google Calendar status badge / Export button */}
+                          {(evt.id.startsWith('gcal-') || evt.googleEventId) ? (
+                            <span 
+                              className="text-[10px] font-bold text-sky-700 bg-sky-100/90 px-2 py-0.5 rounded-full flex items-center gap-1"
+                              title="গুগল ক্যালেন্ডার থেকে সিঙ্ককৃত ইভেন্ট"
+                            >
+                              <Cloud className="w-3 h-3 text-sky-600" />
+                              <span className="hidden sm:inline">Google</span>
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => exportToGoogleCalendar(evt)}
+                              className="text-[11px] font-semibold text-sky-700 hover:text-sky-900 bg-sky-50 hover:bg-sky-100 px-2 py-1 rounded-lg border border-sky-200/80 transition-colors flex items-center gap-1 active:scale-95 touch-manipulation"
+                              title="এই ইভেন্টটি আপনার গুগল ক্যালেন্ডারে যুক্ত করুন"
+                            >
+                              <UploadCloud className="w-3 h-3 text-sky-600" />
+                              <span className="hidden sm:inline">গুগলে যোগ</span>
+                            </button>
+                          )}
+
                           {/* Edit Event Button */}
                           {onEditEvent && (
                             <button
@@ -448,9 +491,19 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                             </button>
                           )}
 
-                          {/* Delete Event Button */}
+                          {/* Delete Event Button with mandatory confirmation */}
                           <button
-                            onClick={() => deleteEvent(evt.id)}
+                            onClick={() => {
+                              const isGoogle = evt.id.startsWith('gcal-') || evt.googleEventId;
+                              const confirmed = window.confirm(
+                                isGoogle
+                                  ? `আপনি কি "${evt.title}" ইভেন্টটি অ্যাপ এবং গুগল ক্যালেন্ডার উভয় স্থান থেকেই মুছে ফেলতে চান?`
+                                  : `আপনি কি "${evt.title}" ইভেন্টটি মুছে ফেলতে চান?`
+                              );
+                              if (confirmed) {
+                                deleteEvent(evt.id);
+                              }
+                            }}
                             className="min-w-[34px] min-h-[34px] flex items-center justify-center p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors active:scale-95 touch-manipulation"
                             title="ইভেন্ট মুছে ফেলুন"
                           >

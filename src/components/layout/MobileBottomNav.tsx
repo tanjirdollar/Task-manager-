@@ -50,7 +50,7 @@ export const MobileBottomNav: React.FC = () => {
   return (
     <nav 
       aria-label="মোবাইল দ্রুত নেভিগেশন"
-      className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-md px-1 py-1 flex items-center justify-around safe-area-bottom select-none"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 shadow-md px-1 py-1 flex items-center justify-around safe-area-bottom select-none"
     >
       {navItems.map(item => {
         const isActive = activeTab === item.id;
@@ -61,8 +61,8 @@ export const MobileBottomNav: React.FC = () => {
             onClick={() => setActiveTab(item.id)}
             className={`flex flex-col items-center justify-center py-1.5 px-2 rounded-xl transition-all relative min-w-[52px] min-h-[48px] active:scale-95 touch-manipulation ${
               isActive 
-                ? 'text-indigo-600 font-bold bg-indigo-50/80 shadow-2xs' 
-                : 'text-slate-500 hover:text-slate-800'
+                ? 'text-indigo-600 dark:text-indigo-400 font-bold bg-indigo-50/80 dark:bg-indigo-950/60 shadow-2xs' 
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
             <div className="relative">

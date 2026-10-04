@@ -6,7 +6,7 @@ import { getTodayStr } from '../../context/ProductivityContext';
 interface EventModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (eventData: Omit<CalendarEvent, 'id'>) => void;
+  onSave: (eventData: Omit<CalendarEvent, 'id'>, syncToGoogle?: boolean) => void;
   eventToEdit?: CalendarEvent | null;
   defaultDate?: string;
 }
@@ -25,6 +25,7 @@ export const EventModal: React.FC<EventModalProps> = ({
   const [endTime, setEndTime] = useState('11:00');
   const [location, setLocation] = useState('');
   const [type, setType] = useState<EventType>('meeting');
+  const [syncToGoogle, setSyncToGoogle] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
@@ -37,6 +38,7 @@ export const EventModal: React.FC<EventModalProps> = ({
       setEndTime(eventToEdit.endTime);
       setLocation(eventToEdit.location || '');
       setType(eventToEdit.type);
+      setSyncToGoogle(!!eventToEdit.googleEventId || !!eventToEdit.isGoogleEvent);
     } else {
       setTitle('');
       setDescription('');
@@ -45,6 +47,7 @@ export const EventModal: React.FC<EventModalProps> = ({
       setEndTime('11:00');
       setLocation('');
       setType('meeting');
+      setSyncToGoogle(false);
     }
   }, [eventToEdit, defaultDate, isOpen]);
 
@@ -65,7 +68,7 @@ export const EventModal: React.FC<EventModalProps> = ({
       endTime,
       location: location.trim() || undefined,
       type,
-    });
+    }, syncToGoogle);
     onClose();
   };
 
@@ -204,6 +207,25 @@ export const EventModal: React.FC<EventModalProps> = ({
               className="w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-slate-900 resize-none"
             />
           </div>
+
+          {/* Google Calendar Sync Checkbox */}
+          <label className="flex items-center gap-2.5 p-3 bg-sky-50/70 border border-sky-200 rounded-xl cursor-pointer hover:bg-sky-50 transition-colors">
+            <input
+              type="checkbox"
+              checked={syncToGoogle}
+              onChange={e => setSyncToGoogle(e.target.checked)}
+              className="w-4 h-4 text-sky-600 rounded border-slate-300 focus:ring-sky-500"
+            />
+            <div className="flex flex-col">
+              <span className="text-xs font-bold text-sky-950 flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-sky-600" />
+                গুগল ক্যালেন্ডারের সাথে সিঙ্ক করুন (Google Calendar Sync)
+              </span>
+              <span className="text-[11px] text-sky-700">
+                ইভেন্টটি স্বয়ংক্রিয়ভাবে আপনার প্রাইমারি Google Calendar-এ যোগ হবে।
+              </span>
+            </div>
+          </label>
 
           <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100">
             <button

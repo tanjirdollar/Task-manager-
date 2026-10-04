@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ThemeProvider } from './context/ThemeContext';
 import { ProductivityProvider, useProductivity } from './context/ProductivityContext';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar } from './components/layout/Sidebar';
@@ -13,6 +14,7 @@ import { AssistantView } from './components/assistant/AssistantView';
 import { TaskModal } from './components/modals/TaskModal';
 import { EventModal } from './components/modals/EventModal';
 import { NoteModal } from './components/modals/NoteModal';
+import { ReminderAlertModal } from './components/modals/ReminderAlertModal';
 import { Toast } from './components/layout/Toast';
 import { Task, CalendarEvent, Note } from './types';
 
@@ -21,11 +23,18 @@ const MainAppContent: React.FC = () => {
     activeTab, 
     addTask, 
     updateTask, 
+    toggleTaskStatus,
     addEvent, 
     updateEvent, 
+    exportToGoogleCalendar,
     addNote, 
     updateNote,
-    setActiveTab 
+    setActiveTab,
+    activeReminderTask,
+    dismissReminder,
+    snoozeReminder,
+    soundAlarmEnabled,
+    toggleSoundAlarm
   } = useProductivity();
 
   // Mobile menu open state
@@ -76,11 +85,14 @@ const MainAppContent: React.FC = () => {
     setIsEventModalOpen(true);
   };
 
-  const handleSaveEvent = (eventData: Omit<CalendarEvent, 'id'>) => {
+  const handleSaveEvent = (eventData: Omit<CalendarEvent, 'id'>, syncToGoogle?: boolean) => {
     if (eventToEdit) {
       updateEvent(eventToEdit.id, eventData);
     } else {
-      addEvent(eventData);
+      const created = addEvent(eventData);
+      if (syncToGoogle) {
+        exportToGoogleCalendar(created);
+      }
     }
   };
 
@@ -100,7 +112,7 @@ const MainAppContent: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col transition-colors">
       {/* Top Navbar */}
       <Navbar
         onOpenNewTask={() => handleOpenNewTask()}
@@ -188,6 +200,20 @@ const MainAppContent: React.FC = () => {
         noteToEdit={noteToEdit}
       />
 
+      {/* Task Reminder & Alarm Alert Modal */}
+      <ReminderAlertModal
+        task={activeReminderTask}
+        isOpen={!!activeReminderTask}
+        onClose={dismissReminder}
+        onComplete={(taskId) => {
+          toggleTaskStatus(taskId);
+          dismissReminder();
+        }}
+        onSnooze={snoozeReminder}
+        soundAlarmEnabled={soundAlarmEnabled}
+        onToggleSound={toggleSoundAlarm}
+      />
+
       {/* Global Toast Feedback */}
       <Toast />
     </div>
@@ -196,8 +222,10 @@ const MainAppContent: React.FC = () => {
 
 export default function App() {
   return (
-    <ProductivityProvider>
-      <MainAppContent />
-    </ProductivityProvider>
+    <ThemeProvider>
+      <ProductivityProvider>
+        <MainAppContent />
+      </ProductivityProvider>
+    </ThemeProvider>
   );
 }

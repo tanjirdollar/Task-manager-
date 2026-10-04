@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Calendar, Clock, Tag, AlignLeft, CheckCircle2, AlertCircle } from 'lucide-react';
+import { X, Plus, Trash2, Calendar, Clock, Tag, AlignLeft, CheckCircle2, AlertCircle, Bell } from 'lucide-react';
 import { Task, Priority, Category } from '../../types';
 import { getTodayStr, getOffsetDateStr } from '../../context/ProductivityContext';
 
@@ -25,6 +25,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const [customCategory, setCustomCategory] = useState('');
   const [isCustomCategory, setIsCustomCategory] = useState(false);
   const [dueDate, setDueDate] = useState(defaultDueDate || getTodayStr());
+  const [reminderTime, setReminderTime] = useState('');
   const [estimatedMinutes, setEstimatedMinutes] = useState(30);
   const [subtasks, setSubtasks] = useState<{ id: string; title: string; completed: boolean }[]>([]);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
@@ -47,6 +48,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       }
 
       setDueDate(taskToEdit.dueDate || getTodayStr());
+      setReminderTime(taskToEdit.reminderTime || '');
       setEstimatedMinutes(taskToEdit.estimatedMinutes || 30);
       setSubtasks(taskToEdit.subtasks || []);
     } else {
@@ -57,6 +59,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setIsCustomCategory(false);
       setCustomCategory('');
       setDueDate(defaultDueDate || getTodayStr());
+      setReminderTime('');
       setEstimatedMinutes(30);
       setSubtasks([]);
     }
@@ -101,6 +104,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       status: taskToEdit ? taskToEdit.status : 'todo',
       category: finalCategory,
       dueDate,
+      reminderTime: reminderTime.trim() || undefined,
       estimatedMinutes: Number(estimatedMinutes) || 30,
       subtasks,
     });
@@ -321,6 +325,70 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 <span className="text-xs text-slate-500 shrink-0">মিনিট বরাদ্দ</span>
               </div>
             </div>
+          </div>
+
+          {/* Task Reminder & Alarm Time */}
+          <div className="p-3.5 bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 rounded-2xl space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-300 flex items-center gap-1.5">
+                <Bell className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                টাস্ক রিমাইন্ডার ও অ্যালার্মের সময় (Reminder Alarm)
+              </label>
+              {reminderTime && (
+                <button
+                  type="button"
+                  onClick={() => setReminderTime('')}
+                  className="text-[11px] font-semibold text-amber-700 hover:text-amber-900 underline"
+                >
+                  রিমাইন্ডার মুছুন
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="time"
+                value={reminderTime}
+                onChange={e => setReminderTime(e.target.value)}
+                className="px-3 py-1.5 text-sm bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-800 rounded-xl text-slate-900 dark:text-slate-100 font-mono font-bold focus:outline-hidden focus:ring-2 focus:ring-amber-500"
+              />
+              <div className="flex flex-wrap items-center gap-1 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const now = new Date(Date.now() + 15 * 60000);
+                    setReminderTime(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
+                  }}
+                  className="px-2 py-1 bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-800 rounded-lg text-amber-800 dark:text-amber-300 font-semibold hover:bg-amber-100"
+                >
+                  +১৫ মিনিট
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReminderTime('10:00')}
+                  className="px-2 py-1 bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-800 rounded-lg text-amber-800 dark:text-amber-300 font-semibold hover:bg-amber-100"
+                >
+                  সকাল ১০:০০
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReminderTime('18:00')}
+                  className="px-2 py-1 bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-800 rounded-lg text-amber-800 dark:text-amber-300 font-semibold hover:bg-amber-100"
+                >
+                  সন্ধ্যা ৬:০০
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReminderTime('21:00')}
+                  className="px-2 py-1 bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-800 rounded-lg text-amber-800 dark:text-amber-300 font-semibold hover:bg-amber-100"
+                >
+                  রাত ৯:০০
+                </button>
+              </div>
+            </div>
+            <p className="text-[11px] text-amber-700/80 dark:text-amber-400/80">
+              নির্ধারিত সময়ে অডিও অ্যালার্ম ও ব্রাউজার নোটিফিকেশন সতর্কবার্তা বাজবে।
+            </p>
           </div>
 
           {/* Subtasks checklist */}
