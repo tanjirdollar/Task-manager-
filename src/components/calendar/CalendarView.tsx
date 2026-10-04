@@ -342,16 +342,29 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           </div>
 
           {/* Bottom helper tip */}
-          <div className="flex items-center justify-between text-xs text-slate-500 pt-3 mt-3 border-t border-slate-100">
-            <span>ক্যালেন্ডারের যেকোনো দিনে ক্লিক করে বিস্তারিত দেখুন বা ডাবল-ক্লিক করে ইভেন্ট যোগ করুন</span>
-            <div className="flex items-center gap-3">
-              <span className="flex items-center gap-1 text-[11px]">
-                <span className="w-2 h-2 rounded-full bg-sky-500 inline-block" /> ইভেন্ট
-              </span>
-              <span className="flex items-center gap-1 text-[11px]">
-                <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" /> টাস্ক
-              </span>
+          <div className="flex flex-col gap-2 pt-3 mt-3 border-t border-slate-100">
+            <div className="flex items-center justify-between text-xs text-slate-500">
+              <span className="hidden sm:inline">ক্যালেন্ডারের যেকোনো দিনে ক্লিক করে বিস্তারিত দেখুন বা ডাবল-ক্লিক করে ইভেন্ট যোগ করুন</span>
+              <span className="sm:hidden">দিন নির্বাচন করুন</span>
+              <div className="flex items-center gap-3">
+                <span className="flex items-center gap-1 text-[11px]">
+                  <span className="w-2 h-2 rounded-full bg-sky-500 inline-block" /> ইভেন্ট
+                </span>
+                <span className="flex items-center gap-1 text-[11px]">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" /> টাস্ক
+                </span>
+              </div>
             </div>
+
+            {/* Mobile quick jump to schedule button */}
+            <button
+              type="button"
+              onClick={() => setMobileTab('schedule')}
+              className="lg:hidden w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-1.5 touch-manipulation active:scale-95"
+            >
+              <Clock className="w-3.5 h-3.5 text-indigo-600" />
+              <span>নির্বাচিত তারিখের সূচি দেখুন ({selectedDateFormatted}) →</span>
+            </button>
           </div>
         </div>
 
@@ -513,7 +526,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                             {task.title}
                           </p>
                           <div className="text-[11px] text-slate-500 mt-0.5">
-                            {task.category} · {task.priority} অগ্রাধিকার
+                            {task.category} · {task.priority === 'urgent' ? 'জরুরি' : task.priority === 'high' ? 'উচ্চ' : task.priority === 'low' ? 'সাধারণ' : 'মাঝারি'} অগ্রাধিকার
                           </div>
                         </div>
                       </div>
