@@ -36,7 +36,8 @@ import {
   setDoc, 
   deleteDoc, 
   onSnapshot,
-  getDocs
+  getDocs,
+  getDoc
 } from 'firebase/firestore';
 import { User as FirebaseUser } from 'firebase/auth';
 
@@ -412,44 +413,43 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
     return () => unsubscribe();
   }, []);
 
-  // FIRESTORE REAL-TIME TWO-WAY DATA SYNC (When user is logged in)
+  // FIRESTORE REAL-TIME MULTI-BROWSER TWO-WAY DATA SYNC
   useEffect(() => {
-    if (!firebaseUser) return;
-
-    // Test Firestore connection on auth
+    // Test Firestore connection on mount
     testFirestoreConnection().catch(() => {});
-
     setIsCloudSyncing(true);
-    const userId = firebaseUser.uid;
 
-    let isInitialTasks = true;
-    let isInitialEvents = true;
-    let isInitialNotes = true;
+    const WORKSPACE_ID = 'default';
 
-    // Listen to user's tasks in real-time
-    const tasksCol = collection(db, 'users', userId, 'tasks');
+    // One-time workspace bootstrap check: if workspace has never been initialized, seed demo data
+    const metaRef = doc(db, 'workspaces', WORKSPACE_ID, 'settings', 'meta');
+    getDoc(metaRef)
+      .then((metaSnap) => {
+        if (!metaSnap.exists()) {
+          setDoc(metaRef, { initialized: true, createdAt: new Date().toISOString() }).catch(() => {});
+          initialTasks.forEach(t => {
+            setDoc(doc(db, 'workspaces', WORKSPACE_ID, 'tasks', t.id), t, { merge: true }).catch(() => {});
+          });
+          initialEvents.forEach(e => {
+            setDoc(doc(db, 'workspaces', WORKSPACE_ID, 'events', e.id), e, { merge: true }).catch(() => {});
+          });
+          initialNotes.forEach(n => {
+            setDoc(doc(db, 'workspaces', WORKSPACE_ID, 'notes', n.id), n, { merge: true }).catch(() => {});
+          });
+        }
+      })
+      .catch((err) => {
+        console.warn('Workspace meta check:', err);
+      });
+
+    // 1. Listen to tasks in real-time across all browser windows/tabs
+    const tasksCol = collection(db, 'workspaces', WORKSPACE_ID, 'tasks');
     const unsubTasks = onSnapshot(tasksCol, (snapshot) => {
       const cloudTasks: Task[] = [];
       snapshot.forEach(docSnap => {
         cloudTasks.push({ id: docSnap.id, ...docSnap.data() } as Task);
       });
 
-      // On initial snapshot for a brand-new user whose cloud is empty:
-      if (isInitialTasks) {
-        isInitialTasks = false;
-        if (cloudTasks.length === 0 && tasks.length > 0) {
-          // Upload local items once to bootstrap user account
-          tasks.forEach(t => {
-            setDoc(doc(db, 'users', userId, 'tasks', t.id), t, { merge: true }).catch(err => {
-              console.error('Task bootstrap error:', err);
-            });
-          });
-          setIsCloudSyncing(false);
-          return;
-        }
-      }
-
-      // Live update from Firestore: this applies additions, edits, and deletions instantly
       cloudTasks.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
       setTasks(cloudTasks);
       setLastCloudSync(new Date().toLocaleTimeString());
@@ -459,51 +459,29 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setIsCloudSyncing(false);
     });
 
-    // Listen to user's events in real-time
-    const eventsCol = collection(db, 'users', userId, 'events');
+    // 2. Listen to events in real-time
+    const eventsCol = collection(db, 'workspaces', WORKSPACE_ID, 'events');
     const unsubEvents = onSnapshot(eventsCol, (snapshot) => {
       const cloudEvents: CalendarEvent[] = [];
       snapshot.forEach(docSnap => {
         cloudEvents.push({ id: docSnap.id, ...docSnap.data() } as CalendarEvent);
       });
 
-      if (isInitialEvents) {
-        isInitialEvents = false;
-        if (cloudEvents.length === 0 && events.length > 0) {
-          events.forEach(e => {
-            setDoc(doc(db, 'users', userId, 'events', e.id), e, { merge: true }).catch(err => {
-              console.error('Event bootstrap error:', err);
-            });
-          });
-          return;
-        }
-      }
-
+      cloudEvents.sort((a, b) => `${a.date} ${a.startTime}`.localeCompare(`${b.date} ${b.startTime}`));
       setEvents(cloudEvents);
     }, (error) => {
       console.error('Firestore events listener error:', error);
     });
 
-    // Listen to user's notes in real-time
-    const notesCol = collection(db, 'users', userId, 'notes');
+    // 3. Listen to notes in real-time
+    const notesCol = collection(db, 'workspaces', WORKSPACE_ID, 'notes');
     const unsubNotes = onSnapshot(notesCol, (snapshot) => {
       const cloudNotes: Note[] = [];
       snapshot.forEach(docSnap => {
         cloudNotes.push({ id: docSnap.id, ...docSnap.data() } as Note);
       });
 
-      if (isInitialNotes) {
-        isInitialNotes = false;
-        if (cloudNotes.length === 0 && notes.length > 0) {
-          notes.forEach(n => {
-            setDoc(doc(db, 'users', userId, 'notes', n.id), n, { merge: true }).catch(err => {
-              console.error('Note bootstrap error:', err);
-            });
-          });
-          return;
-        }
-      }
-
+      cloudNotes.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
       setNotes(cloudNotes);
     }, (error) => {
       console.error('Firestore notes listener error:', error);
@@ -514,7 +492,7 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
       unsubEvents();
       unsubNotes();
     };
-  }, [firebaseUser]);
+  }, []);
 
   // TASK REMINDER & ALARM ENGINE
   useEffect(() => {
@@ -661,17 +639,12 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   // Manual Cloud Data Refresh
   const refreshCloudData = async () => {
-    if (!firebaseUser) {
-      showToast('ক্লাউড সিঙ্ক করতে প্রথমে Google লগইন করুন', 'info');
-      await signInWithGoogle();
-      return;
-    }
     setIsCloudSyncing(true);
     try {
       const [tasksSnap, eventsSnap, notesSnap] = await Promise.all([
-        getDocs(collection(db, 'users', firebaseUser.uid, 'tasks')),
-        getDocs(collection(db, 'users', firebaseUser.uid, 'events')),
-        getDocs(collection(db, 'users', firebaseUser.uid, 'notes')),
+        getDocs(collection(db, 'workspaces', 'default', 'tasks')),
+        getDocs(collection(db, 'workspaces', 'default', 'events')),
+        getDocs(collection(db, 'workspaces', 'default', 'notes')),
       ]);
 
       const cloudTasks: Task[] = [];
@@ -689,7 +662,7 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       const timeStr = new Date().toLocaleTimeString();
       setLastCloudSync(timeStr);
-      showToast('✓ ক্লাউড ডেটাবেজ থেকে রিয়েল-টাইমে সফলভাবে রিফ্রেশ হয়েছে!', 'success');
+      showToast('✓ লাইভ ক্লাউড ডেটাবেজ থেকে সফলভাবে সিঙ্ক হয়েছে!', 'success');
     } catch (err) {
       console.error('Cloud refresh error:', err);
       showToast('ক্লাউড রিফ্রেশ করতে সমস্যা হয়েছে', 'error');
@@ -735,7 +708,10 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     setTasks(prev => [task, ...prev]);
 
-    // Save to Firestore if authenticated
+    // Save to Firestore shared workspace immediately for multi-browser sync
+    setDoc(doc(db, 'workspaces', 'default', 'tasks', task.id), task, { merge: true }).catch(err => {
+      console.error('Firestore write task error:', err);
+    });
     if (firebaseUser) {
       setDoc(doc(db, 'users', firebaseUser.uid, 'tasks', task.id), task, { merge: true }).catch(() => {});
     }
@@ -754,7 +730,8 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
           } else if (updates.status && updates.status !== 'completed') {
             updated.completedAt = undefined;
           }
-          // Save to Firestore if authenticated
+          // Save to Firestore shared workspace
+          setDoc(doc(db, 'workspaces', 'default', 'tasks', id), updated, { merge: true }).catch(() => {});
           if (firebaseUser) {
             setDoc(doc(db, 'users', firebaseUser.uid, 'tasks', id), updated, { merge: true }).catch(() => {});
           }
@@ -771,7 +748,10 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
     if (activeFocusTaskId === id) {
       setActiveFocusTaskId(null);
     }
-    // Delete from Firestore if authenticated
+    // Delete from Firestore shared workspace
+    deleteDoc(doc(db, 'workspaces', 'default', 'tasks', id)).catch(err => {
+      console.error('Firestore delete task error:', err);
+    });
     if (firebaseUser) {
       deleteDoc(doc(db, 'users', firebaseUser.uid, 'tasks', id)).catch(() => {});
     }
@@ -797,6 +777,7 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
             showToast('টাস্ক পুনরায় প্রক্রিয়াধীন হিসেবে সেট করা হয়েছে', 'info');
           }
 
+          setDoc(doc(db, 'workspaces', 'default', 'tasks', id), updated, { merge: true }).catch(() => {});
           if (firebaseUser) {
             setDoc(doc(db, 'users', firebaseUser.uid, 'tasks', id), updated, { merge: true }).catch(() => {});
           }
@@ -822,6 +803,7 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
             completedAt: allCompleted ? new Date().toISOString() : t.completedAt,
           };
 
+          setDoc(doc(db, 'workspaces', 'default', 'tasks', taskId), updated, { merge: true }).catch(() => {});
           if (firebaseUser) {
             setDoc(doc(db, 'users', firebaseUser.uid, 'tasks', taskId), updated, { merge: true }).catch(() => {});
           }
@@ -841,6 +823,7 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     setEvents(prev => [...prev, event]);
 
+    setDoc(doc(db, 'workspaces', 'default', 'events', event.id), event, { merge: true }).catch(() => {});
     if (firebaseUser) {
       setDoc(doc(db, 'users', firebaseUser.uid, 'events', event.id), event, { merge: true }).catch(() => {});
     }
@@ -854,6 +837,7 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
       prev.map(e => {
         if (e.id === id) {
           const updated = { ...e, ...updates };
+          setDoc(doc(db, 'workspaces', 'default', 'events', id), updated, { merge: true }).catch(() => {});
           if (firebaseUser) {
             setDoc(doc(db, 'users', firebaseUser.uid, 'events', id), updated, { merge: true }).catch(() => {});
           }
@@ -869,6 +853,7 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
     const target = events.find(e => e.id === id);
     setEvents(prev => prev.filter(e => e.id !== id));
 
+    deleteDoc(doc(db, 'workspaces', 'default', 'events', id)).catch(() => {});
     if (firebaseUser) {
       deleteDoc(doc(db, 'users', firebaseUser.uid, 'events', id)).catch(() => {});
     }
@@ -895,6 +880,7 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     setNotes(prev => [note, ...prev]);
 
+    setDoc(doc(db, 'workspaces', 'default', 'notes', note.id), note, { merge: true }).catch(() => {});
     if (firebaseUser) {
       setDoc(doc(db, 'users', firebaseUser.uid, 'notes', note.id), note, { merge: true }).catch(() => {});
     }
@@ -912,6 +898,7 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
             ...updates,
             updatedAt: new Date().toISOString(),
           };
+          setDoc(doc(db, 'workspaces', 'default', 'notes', id), updated, { merge: true }).catch(() => {});
           if (firebaseUser) {
             setDoc(doc(db, 'users', firebaseUser.uid, 'notes', id), updated, { merge: true }).catch(() => {});
           }
@@ -925,6 +912,7 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const deleteNote = (id: string) => {
     setNotes(prev => prev.filter(n => n.id !== id));
+    deleteDoc(doc(db, 'workspaces', 'default', 'notes', id)).catch(() => {});
     if (firebaseUser) {
       deleteDoc(doc(db, 'users', firebaseUser.uid, 'notes', id)).catch(() => {});
     }
@@ -936,6 +924,7 @@ export const ProductivityProvider: React.FC<{ children: React.ReactNode }> = ({ 
       prev.map(n => {
         if (n.id === id) {
           const updated = { ...n, pinned: !n.pinned, updatedAt: new Date().toISOString() };
+          setDoc(doc(db, 'workspaces', 'default', 'notes', id), updated, { merge: true }).catch(() => {});
           if (firebaseUser) {
             setDoc(doc(db, 'users', firebaseUser.uid, 'notes', id), updated, { merge: true }).catch(() => {});
           }

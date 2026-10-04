@@ -25,20 +25,41 @@ service cloud.firestore {
       allow read: if true;
     }
 
-    // Per-user subcollections (Tasks, Events, Notes, Settings)
-    match /users/{userId} {
-      allow read, write: if isOwner(userId) && isValidId(userId);
+    // Shared Workspace for real-time collaboration and multi-browser synchronization
+    match /workspaces/{workspaceId} {
+      allow read, write: if true;
 
       match /tasks/{taskId} {
-        allow read, write: if isOwner(userId) && isValidId(taskId);
+        allow read, write: if true;
       }
 
       match /events/{eventId} {
-        allow read, write: if isOwner(userId) && isValidId(eventId);
+        allow read, write: if true;
       }
 
       match /notes/{noteId} {
-        allow read, write: if isOwner(userId) && isValidId(noteId);
+        allow read, write: if true;
+      }
+
+      match /settings/{settingId} {
+        allow read, write: if true;
+      }
+    }
+
+    // Per-user subcollections (Tasks, Events, Notes, Settings)
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+
+      match /tasks/{taskId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /events/{eventId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /notes/{noteId} {
+        allow read, write: if isOwner(userId);
       }
 
       match /settings/{settingId} {

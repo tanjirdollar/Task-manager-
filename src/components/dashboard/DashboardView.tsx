@@ -219,51 +219,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
-      {/* Cloud Sync Status Banner */}
-      {firebaseUser ? (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 rounded-2xl text-xs text-emerald-900 dark:text-emerald-200 shadow-2xs">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-            <div className="min-w-0">
-              <span className="font-bold flex items-center gap-1.5 truncate">
-                <Cloud className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                রিয়েল-টাইম ক্লাউড সিঙ্ক সক্রিয় ({user.email})
-              </span>
-              <p className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-0.5 truncate">
-                যেকোনো ডিভাইস বা ব্রাউজার থেকে করা পরিবর্তন সাথে সাথে স্বয়ংক্রিয়ভাবে সিঙ্ক হচ্ছে {lastCloudSync ? `(সর্বশেষ সিঙ্ক: ${lastCloudSync})` : ''}।
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={refreshCloudData}
-            disabled={isCloudSyncing}
-            className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 rounded-xl font-bold text-xs hover:bg-emerald-50 transition-all shrink-0 active:scale-95 shadow-2xs"
-            title="ক্লাউড থেকে এখনই ডেটা রিফ্রেশ করুন"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isCloudSyncing ? 'animate-spin text-emerald-600' : ''}`} />
-            <span>{isCloudSyncing ? 'সিঙ্ক হচ্ছে...' : 'এখনই রিফ্রেশ'}</span>
-          </button>
-        </div>
-      ) : (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 rounded-2xl text-xs text-amber-900 dark:text-amber-200 shadow-2xs">
-          <div className="flex items-center gap-2.5">
-            <Cloud className="w-4 h-4 text-amber-600 shrink-0" />
-            <div>
-              <span className="font-bold">লোকাল মোড সক্রিয় (ডিভাইস সিঙ্ক বন্ধ):</span>
-              <p className="text-[11px] text-amber-700 dark:text-amber-300 mt-0.5">
-                দুটি ব্রাউজার বা ডিভাইসে একই ডেটা দেখতে এবং রিয়েল-টাইমে সিঙ্ক পেতে উভয় ব্রাউজারেই একই Google অ্যাকাউন্টে লগইন করুন।
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={signInWithGoogle}
-            className="flex items-center justify-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs shrink-0 whitespace-nowrap shadow-xs active:scale-95 transition-all"
-          >
-            Google লগইন করুন
-          </button>
-        </div>
-      )}
-
       {/* 2. Clear KPI Cards for Core Metrics */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
         {/* আজকের টাস্ক */}

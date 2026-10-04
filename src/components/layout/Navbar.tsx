@@ -77,12 +77,12 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-3 sm:px-6 flex items-center justify-between sticky top-0 z-30 transition-colors">
-      {/* Zone 1: Navigation & Context Title */}
-      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+    <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-3 sm:px-6 flex items-center justify-between sticky top-0 z-30 transition-colors flex-nowrap overflow-hidden">
+      {/* Zone 1: Navigation & Context Title & Live Sync Status */}
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink-0">
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="min-w-[40px] min-h-[40px] flex items-center justify-center p-2 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white md:hidden rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors touch-manipulation"
+          className="min-w-[36px] min-h-[36px] flex items-center justify-center p-2 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white md:hidden rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors touch-manipulation shrink-0"
           aria-label="নেভিগেশন মেনু খুলুন"
         >
           {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -90,86 +90,59 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         <button 
           onClick={() => setActiveTab('dashboard')}
-          className="text-left group flex items-center gap-2 focus:outline-hidden min-h-[40px] py-1"
+          className="text-left group flex items-center gap-1.5 sm:gap-2 focus:outline-hidden min-h-[36px] py-1 shrink-0"
         >
           <span className="text-base sm:text-lg font-bold tracking-tight text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors truncate">
             ক্রোমা স্টুডিও
           </span>
-          <span className="hidden sm:inline-block text-slate-300 dark:text-slate-700 font-light" aria-hidden="true">/</span>
-          <span className="hidden sm:inline-block text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 truncate">
+          <span className="hidden md:inline-block text-slate-300 dark:text-slate-700 font-light" aria-hidden="true">/</span>
+          <span className="hidden md:inline-block text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 truncate">
             {getBreadcrumbTitle(activeTab)}
           </span>
         </button>
 
-        {/* Real-time Cloud Sync Badge */}
-        {firebaseUser ? (
-          <button 
-            onClick={refreshCloudData}
-            disabled={isCloudSyncing}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 text-[10px] sm:text-xs font-semibold hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all cursor-pointer active:scale-95"
-            title={`ক্লাউড ফায়ারবেস ডেটাবেজ রিয়েল-টাইম সিঙ্ক সক্রিয় (${lastCloudSync ? 'সর্বশেষ: ' + lastCloudSync : 'সক্রিয়'})। ক্লিক করে এখনই রিফ্রেশ করুন`}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
-            <Cloud className={`w-3.5 h-3.5 ${isCloudSyncing ? 'animate-spin text-emerald-600' : 'text-emerald-600'}`} />
-            <span className="hidden sm:inline">সিঙ্কড</span>
-            {lastCloudSync && <span className="hidden xl:inline text-[10px] text-emerald-600 dark:text-emerald-400 opacity-80">({lastCloudSync})</span>}
-          </button>
-        ) : (
-          <button
-            onClick={signInWithGoogle}
-            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60 text-[10px] font-semibold hover:bg-amber-100 transition-colors cursor-pointer"
-            title="অন্যান্য ব্রাউজারের সাথে সিঙ্ক করতে Google লগইন করুন"
-          >
-            <Cloud className="w-3 h-3 text-amber-500" />
-            <span>সিঙ্ক অফলাইন (লগইন করুন)</span>
-          </button>
-        )}
+        {/* Minimal Unobtrusive Real-time Cloud Sync Indicator */}
+        <button 
+          onClick={refreshCloudData}
+          disabled={isCloudSyncing}
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40 text-[10px] font-semibold hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all cursor-pointer shrink-0"
+          title={`ক্লাউড ডেটাবেজ রিয়েল-টাইম সিঙ্ক সক্রিয় (${lastCloudSync ? 'সর্বশেষ: ' + lastCloudSync : 'সক্রিয়'})। ক্লিক করে এখনই রিফ্রেশ করুন`}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
+          <Cloud className={`w-3 h-3 ${isCloudSyncing ? 'animate-spin text-emerald-600' : 'text-emerald-600'}`} />
+          <span className="hidden lg:inline">{isCloudSyncing ? 'সিঙ্ক...' : 'লাইভ'}</span>
+        </button>
       </div>
 
-      {/* Zone 2: Global Search */}
-      <div className="flex-1 max-w-sm mx-3 hidden md:block">
+      {/* Zone 2: Global Search (compact and bounded) */}
+      <div className="hidden md:block w-36 lg:w-56 xl:w-72 max-w-xs mx-2 lg:mx-4 shrink-0">
         <div className="relative">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="টাস্ক, নোট বা ইভেন্ট খুঁজুন..."
+            placeholder="খুঁজুন..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-12 py-1.5 text-xs bg-slate-50 dark:bg-slate-800/70 hover:bg-slate-100/80 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-indigo-500 rounded-xl text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 transition-all"
+            className="w-full pl-8 pr-8 py-1.5 text-xs bg-slate-50 dark:bg-slate-800/70 hover:bg-slate-100/80 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-indigo-500 rounded-xl text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-hidden focus:ring-1 focus:ring-indigo-500/20 transition-all"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-[11px] font-semibold"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-[10px] font-semibold"
             >
-              মুছুন
+              ✕
             </button>
           )}
         </div>
       </div>
 
-      {/* Zone 3: Primary Actions, Theme, Alarms, & Profile */}
-      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+      {/* Zone 3: Primary Actions, Theme, Alarms, & Profile (All fixed h-9, flex-nowrap) */}
+      <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 flex-nowrap">
         
-        {/* Google Calendar Sync Button */}
-        <button
-          onClick={syncGoogleCalendar}
-          disabled={isGoogleCalendarSyncing}
-          className={`flex items-center justify-center gap-1.5 min-h-[38px] px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all active:scale-95 touch-manipulation ${
-            isGoogleCalendarSyncing
-              ? 'bg-sky-50 dark:bg-sky-950/40 text-sky-600 border-sky-300 dark:border-sky-800 animate-pulse'
-              : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'
-          }`}
-          title="গুগল ক্যালেন্ডারের সাথে ইভেন্ট সিঙ্ক করুন"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 text-sky-600 dark:text-sky-400 ${isGoogleCalendarSyncing ? 'animate-spin' : ''}`} />
-          <span className="hidden lg:inline">ক্যালেন্ডার সিঙ্ক</span>
-        </button>
-
         {/* Sound Alarm Toggle */}
         <button
           onClick={toggleSoundAlarm}
-          className={`p-2 rounded-xl border min-h-[38px] min-w-[38px] flex items-center justify-center transition-colors active:scale-95 touch-manipulation ${
+          className={`h-9 w-9 rounded-xl border flex items-center justify-center transition-colors shrink-0 active:scale-95 touch-manipulation ${
             soundAlarmEnabled
               ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-700 dark:text-amber-400'
               : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400'
@@ -182,7 +155,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Theme Switcher */}
         <button
           onClick={toggleTheme}
-          className="p-2 min-h-[38px] min-w-[38px] flex items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors active:scale-95 touch-manipulation"
+          className="h-9 w-9 flex items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shrink-0 active:scale-95 touch-manipulation"
           title={`বর্তমান থিম: ${theme === 'dark' ? 'ডার্ক মোড' : theme === 'midnight' ? 'মিডনাইট ব্লু' : 'লাইট মোড'} (ক্লিক করে পরিবর্তন করুন)`}
         >
           {theme === 'dark' ? (
@@ -197,26 +170,26 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* AI Assistant Button */}
         <button
           onClick={() => setActiveTab('assistant')}
-          className={`flex items-center justify-center gap-1.5 min-h-[38px] px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-xl transition-colors whitespace-nowrap active:scale-95 touch-manipulation ${
+          className={`h-9 px-2 sm:px-2.5 flex items-center justify-center gap-1.5 text-xs font-semibold rounded-xl transition-colors shrink-0 whitespace-nowrap active:scale-95 touch-manipulation ${
             activeTab === 'assistant'
               ? 'bg-indigo-600 text-white shadow-xs'
               : 'text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700'
           }`}
           title="এআই সহকারীর সাথে কথা বলুন"
         >
-          <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-          <span className="hidden sm:inline">এআই সহকারী</span>
+          <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+          <span className="hidden lg:inline">সহকারী</span>
         </button>
 
         {/* Quick Add Dropdown */}
-        <div className="relative">
+        <div className="relative shrink-0">
           <button
             onClick={() => setQuickCreateOpen(!quickCreateOpen)}
-            className="flex items-center justify-center gap-1.5 min-h-[38px] px-3 py-1.5 text-xs font-semibold text-white bg-slate-900 dark:bg-indigo-600 hover:bg-slate-800 dark:hover:bg-indigo-700 rounded-xl shadow-xs transition-colors whitespace-nowrap shrink-0 active:scale-95 touch-manipulation"
+            className="h-9 px-2.5 sm:px-3 flex items-center justify-center gap-1.5 text-xs font-semibold text-white bg-slate-900 dark:bg-indigo-600 hover:bg-slate-800 dark:hover:bg-indigo-700 rounded-xl shadow-xs transition-colors shrink-0 whitespace-nowrap active:scale-95 touch-manipulation"
             title="নতুন আইটেম তৈরি করুন"
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span className="hidden xs:inline sm:inline">তৈরি করুন</span>
+            <Plus className="w-3.5 h-3.5 shrink-0" />
+            <span className="hidden sm:inline">নতুন</span>
           </button>
 
           {quickCreateOpen && (
@@ -273,27 +246,27 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* User Profile / Google Login Section */}
-        <div className="relative pl-1 sm:pl-2 border-l border-slate-200 dark:border-slate-800">
+        <div className="relative pl-1 sm:pl-1.5 border-l border-slate-200 dark:border-slate-800 shrink-0">
           {firebaseUser ? (
             <div>
               <button
                 onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-                className="flex items-center gap-2 p-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                className="h-9 flex items-center gap-1.5 p-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
                 title={`${user.name} (${user.email}) - গুগল সিঙ্ক সক্রিয়`}
               >
                 {user.photoURL ? (
                   <img
                     src={user.photoURL}
                     alt={user.name}
-                    className="w-8 h-8 rounded-full ring-2 ring-emerald-500/40 object-cover"
+                    className="w-7 h-7 rounded-full ring-2 ring-emerald-500/40 object-cover"
                   />
                 ) : (
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-600 to-slate-900 text-white flex items-center justify-center text-xs font-bold ring-2 ring-emerald-500/40 shadow-xs">
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-600 to-slate-900 text-white flex items-center justify-center text-xs font-bold ring-2 ring-emerald-500/40 shadow-xs">
                     {user.initials}
                   </div>
                 )}
                 <div className="hidden xl:flex flex-col text-left">
-                  <span className="text-xs font-bold text-slate-900 dark:text-slate-100 leading-tight truncate max-w-[100px]">
+                  <span className="text-xs font-bold text-slate-900 dark:text-slate-100 leading-tight truncate max-w-[90px]">
                     {user.name}
                   </span>
                   <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold leading-tight">
@@ -377,8 +350,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={signInWithGoogle}
               disabled={isLoggingIn}
-              className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-100 text-xs font-bold rounded-xl shadow-xs transition-all active:scale-95 touch-manipulation whitespace-nowrap"
-              title="গুগল দিয়ে লগইন করে ক্লাউড সিঙ্ক ও গুগল ক্যালেন্ডার সক্রিয় করুন"
+              className="h-9 px-2.5 sm:px-3 flex items-center gap-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-100 text-xs font-bold rounded-xl shadow-xs transition-all active:scale-95 touch-manipulation whitespace-nowrap shrink-0"
+              title="গুগল দিয়ে লগইন করে ক্লাউড প্রোফাইল ও গুগল ক্যালেন্ডার সক্রিয় করুন"
             >
               <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                 <path
