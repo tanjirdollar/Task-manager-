@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useProductivity, getTodayStr, getOffsetDateStr, toBengaliNumber } from '../../context/ProductivityContext';
 import { AssistantMessage, Priority, Category, ActiveTab, ExecutedAction, SearchResultBlock } from '../../types';
+import { parseLocalAICommand } from '../../utils/aiCommandParser';
 
 export const AssistantView: React.FC = () => {
   const { 
@@ -92,10 +93,10 @@ export const AssistantView: React.FC = () => {
     if (!textToSend) setInputMessage('');
     setIsLoading(true);
 
-    try {
-      const todayStr = getTodayStr();
-      const tomorrowStr = getOffsetDateStr(1);
+    const todayStr = getTodayStr();
+    const tomorrowStr = getOffsetDateStr(1);
 
+    try {
       const contextPayload = {
         tasks: tasks.slice(0, 15).map(t => ({
           id: t.id,
@@ -133,28 +134,44 @@ export const AssistantView: React.FC = () => {
         text: m.text,
       }));
 
-      const res = await fetch('/api/assistant', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: query,
-          context: contextPayload,
-          history: conversationHistory,
-        }),
-      });
-
-      if (!res.ok) {
-        throw new Error('সার্ভার রেসপন্স দিতে ব্যর্থ হয়েছে');
-      }
-
-      const data = await res.json();
-      let replyText = data.reply || 'আপনার নির্দেশ অনুযায়ী অ্যাকশন পর্যালোচনা করা হয়েছে।';
-      const receivedActions: any[] = Array.isArray(data.actions) ? data.actions : [];
-
-      const executedList: ExecutedAction[] = [];
+      let replyText = '';
+      let receivedActions: any[] = [];
       let searchBlock: SearchResultBlock | undefined = undefined;
 
-      // EXECUTE ACTIONS IN PRODUCTIVITY CONTEXT WITH STRICT DUPLICATE PREVENTION
+      // 1. Attempt to call server assistant API
+      try {
+        const res = await fetch('/api/assistant', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: query,
+            context: contextPayload,
+            history: conversationHistory,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data && typeof data.reply === 'string') {
+            replyText = data.reply;
+            receivedActions = Array.isArray(data.actions) ? data.actions : [];
+          }
+        }
+      } catch (networkOrApiErr) {
+        console.warn('Remote assistant API unreachable, using integrated local parser:', networkOrApiErr);
+      }
+
+      // 2. High-precision Local NLP Fallback:
+      // If remote returned nothing, or returned zero actions for an action request (like adding a task):
+      const localResult = parseLocalAICommand(query, contextPayload, conversationHistory);
+      if (!replyText || (receivedActions.length === 0 && localResult.actions.length > 0)) {
+        replyText = localResult.reply;
+        receivedActions = localResult.actions;
+      }
+
+      const executedList: ExecutedAction[] = [];
+
+      // 3. EXECUTE ACTIONS IN PRODUCTIVITY CONTEXT WITH STRICT DUPLICATE PREVENTION
       for (const act of receivedActions) {
         if (act.type === 'create_task' && act.data) {
           const taskData = act.data;
@@ -176,13 +193,13 @@ export const AssistantView: React.FC = () => {
               category: (taskData.category as Category) || 'কাজ',
               dueDate,
               description: taskData.description || 'এআই সহকারী দ্বারা তৈরি',
-              estimatedMinutes: 30,
+              estimatedMinutes: Number(taskData.estimatedMinutes) || 30,
               subtasks: [],
             });
 
             executedList.push({
               type: 'টাস্ক তৈরি',
-              description: `"${created.title}" টাস্ক সফলভাবে তৈরি ও ড্যাশবোর্ডে যোগ করা হয়েছে (${taskData.priority === 'high' ? 'উচ্চ অগ্রাধিকার' : 'মাঝারি অগ্রাধিকার'})`,
+              description: `"${created.title}" টাস্ক সফলভাবে তৈরি ও ড্যাশবোর্ডে যোগ করা হয়েছে`,
               targetTab: 'dashboard',
               itemTitle: created.title,
             });
@@ -305,72 +322,7 @@ export const AssistantView: React.FC = () => {
         }
       }
 
-      // CLIENT-SIDE SAFETY NET:
-      // If no action was returned by the server, but the user explicitly requested a task creation:
-      if (executedList.length === 0) {
-        const lowerQ = query.toLowerCase();
-        const hasTaskWord = lowerQ.includes('টাস্ক') || lowerQ.includes('task') || lowerQ.includes('কাজ যুক্ত') || lowerQ.includes('লিস্টে রাখো') || lowerQ.includes('চার্জ দিতে হবে');
-        const notSearchOrComplete = !lowerQ.includes('দেখাও') && !lowerQ.includes('খুঁজ') && !lowerQ.includes('সম্পন্ন') && !lowerQ.includes('complete');
-
-        if (hasTaskWord && notSearchOrComplete) {
-          let priority: Priority = 'medium';
-          if (lowerQ.includes('হাই') || lowerQ.includes('high') || lowerQ.includes('জরুরি') || lowerQ.includes('উচ্চ')) {
-            priority = 'high';
-          } else if (lowerQ.includes('লো') || lowerQ.includes('low') || lowerQ.includes('কম')) {
-            priority = 'low';
-          }
-
-          let dueDate = todayStr;
-          if (lowerQ.includes('কাল') || lowerQ.includes('tomorrow')) dueDate = tomorrowStr;
-
-          // Extract title
-          const clauses = query.split(/[।\n;:]+/).map(s => s.trim()).filter(Boolean);
-          let taskTitle = '';
-          if (clauses.length >= 2) {
-            if (/টাস্ক|task|যুক্ত|যোগ|করো|করুন|add|create/i.test(clauses[0])) {
-              taskTitle = clauses.slice(1).join(' ').trim();
-            } else {
-              taskTitle = clauses[0];
-            }
-          }
-          if (!taskTitle) {
-            taskTitle = query
-              .replace(/^(একটি\s+)?(হাই[- ]?প্রায়োরিটি|উচ্চ অগ্রাধিকারের)?\s*টাস্ক\s*(যুক্ত|যোগ|অ্যাড|তৈরি)?\s*(করো|করুন)?[\s।:.-]*/gi, '')
-              .replace(/(টাস্কে?\s*(যুক্ত|যোগ|রাখো|করো|করুন))$/gi, '')
-              .trim();
-          }
-          taskTitle = taskTitle.replace(/^[।:.-]+|[।:.-]+$/g, '').trim() || 'নতুন টাস্ক';
-
-          const isDuplicate = tasks.some(t => t.title.toLowerCase().trim() === taskTitle.toLowerCase().trim() && t.dueDate === dueDate);
-          if (!isDuplicate) {
-            const category: Category = (lowerQ.includes('ফোন') || lowerQ.includes('চার্জ')) ? 'ব্যক্তিগত' : 'কাজ';
-            const created = addTask({
-              title: taskTitle,
-              priority,
-              status: 'todo',
-              category,
-              dueDate,
-              description: 'এআই সহকারী দ্বারা তৈরি',
-              estimatedMinutes: 30,
-              subtasks: [],
-            });
-
-            executedList.push({
-              type: 'টাস্ক তৈরি',
-              description: `"${created.title}" টাস্ক সফলভাবে তৈরি ও ড্যাশবোর্ডে যোগ করা হয়েছে (${priority === 'high' ? 'উচ্চ অগ্রাধিকার' : 'মাঝারি অগ্রাধিকার'})`,
-              targetTab: 'dashboard',
-              itemTitle: created.title,
-            });
-
-            replyText = `✓ টাস্ক তৈরি সম্পন্ন হয়েছে! **"${created.title}"** টাস্কটি ${priority === 'high' ? 'উচ্চ অগ্রাধিকার (High Priority)' : 'মাঝারি অগ্রাধিকার'} সহ সফলভাবে আপনার ড্যাশবোর্ড ও কাজের তালিকায় যোগ করা হয়েছে।`;
-          }
-        }
-      }
-
-      let finalReplyText = replyText;
-      if (executedList.length > 0 && replyText.includes('### 📊 তানজিরের দৈনিক প্রোডাক্টিভিটি সারাংশ')) {
-        finalReplyText = `✓ অ্যাকশন সম্পন্ন হয়েছে! আপনার নির্দেশ অনুযায়ী টাস্কটি তৈরি করা হয়েছে।`;
-      }
+      let finalReplyText = replyText || 'আপনার অনুরোধ সফলভাবে সম্পন্ন করা হয়েছে।';
 
       const botMsg: AssistantMessage = {
         id: `msg-${Date.now() + 1}`,
@@ -384,14 +336,57 @@ export const AssistantView: React.FC = () => {
       setMessages(prev => [...prev, botMsg]);
     } catch (err: any) {
       console.warn('Assistant error:', err);
-      // Fallback local processing
-      const botMsg: AssistantMessage = {
-        id: `msg-${Date.now() + 1}`,
-        sender: 'assistant',
-        text: 'আপনার অনুরোধটি গ্রহণ করা হয়েছে। নেটওয়ার্ক সংযোগ যাচাই করে পুনরায় নির্দেশ দিতে পারেন।',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      };
-      setMessages(prev => [...prev, botMsg]);
+      // Even in the worst case unexpected exception, process command through local NLP
+      const fallbackResult = parseLocalAICommand(
+        query,
+        {
+          tasks,
+          events,
+          notes,
+          todayStr,
+          tomorrowStr,
+          focusMinutes: todayFocusMinutes,
+        }
+      );
+
+      // If task creation was intended
+      if (fallbackResult.actions.length > 0 && fallbackResult.actions[0].type === 'create_task') {
+        const taskData = fallbackResult.actions[0].data;
+        const created = addTask({
+          title: taskData.title,
+          priority: taskData.priority,
+          status: 'todo',
+          category: taskData.category,
+          dueDate: taskData.dueDate,
+          description: taskData.description,
+          estimatedMinutes: taskData.estimatedMinutes || 30,
+          subtasks: [],
+        });
+
+        const botMsg: AssistantMessage = {
+          id: `msg-${Date.now() + 1}`,
+          sender: 'assistant',
+          text: fallbackResult.reply,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          executedActions: [
+            {
+              type: 'টাস্ক তৈরি',
+              description: `"${created.title}" টাস্ক সফলভাবে তৈরি ও ড্যাশবোর্ডে যোগ করা হয়েছে`,
+              targetTab: 'dashboard',
+              itemTitle: created.title,
+            },
+          ],
+        };
+        setMessages(prev => [...prev, botMsg]);
+      } else {
+        const botMsg: AssistantMessage = {
+          id: `msg-${Date.now() + 1}`,
+          sender: 'assistant',
+          text: fallbackResult.reply,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        };
+        setMessages(prev => [...prev, botMsg]);
+      }
     } finally {
       setIsLoading(false);
     }
